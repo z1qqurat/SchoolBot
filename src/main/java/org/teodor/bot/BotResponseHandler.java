@@ -15,13 +15,16 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 import org.teodor.annotation.BotCommand;
 import org.teodor.config.ConfigManager;
 import org.teodor.pojo.RozkladDto;
-import org.teodor.pojo.teacher.TeacherDetailsDto;
 import org.teodor.util.JsonParser;
+
+import java.util.Map;
 
 import static java.lang.Math.toIntExact;
 import static org.teodor.util.BotMessageBuilder.forwardMessageBuilder;
 import static org.teodor.util.BotMessageBuilder.messageBuilder;
-import static org.teodor.util.MapperHelper.convertNumberOfDayToString;
+import static org.teodor.util.MapperHelper.convertEngCharsIntoUkr;
+import static org.teodor.util.ScheduleHelper.getFormattedScheduleForGrade;
+import static org.teodor.util.ScheduleHelper.getFormattedScheduleForTeacher;
 
 @Log4j2
 public class BotResponseHandler {
@@ -34,7 +37,7 @@ public class BotResponseHandler {
     }
 
     @BotCommand(command = "/predms")
-    public void premdsCommand(Update update) {
+    public void predmsCommand(Update update) {
 //        Map<String, Object> data = WebPageParser.extractJsonFromResponse();
         RozkladDto data = JsonParser.extractJsonRozkladFromFile();
         StringBuilder builder = new StringBuilder();
@@ -43,26 +46,69 @@ public class BotResponseHandler {
         sendMessage(messageBuilder(update.getMessage().getChatId(), builder.toString()));
     }
 
-    @BotCommand(command = "/roz")
+    @BotCommand(command = "/dule")
     public void rozkladCommand(Update update) {
-        TeacherDetailsDto teacher = rozklad.getTeachers().get("96489");
-        var response = new StringBuilder();
-        teacher.getRoz().forEach((k, v) -> {
-            response.append(convertNumberOfDayToString(k) + ":\n");
-            v.forEach((kk, vv) ->
-            {
-                if (vv.size() != 0) {
-                    response.append(kk).append(" - ")
-                            .append(vv.get(0).getCs())
-                            .append(" | ")
-                            .append(rozklad.getAuds().get(vv.getFirst().getA().toString()));
-                    response.append("\n");
-                }
+        sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForTeacher(rozklad, "96489")));
+    }
 
-            });
-            response.append("\n\n");
-        });
-        sendMessage(messageBuilder(update.getMessage().getChatId(), response.toString()));
+    @BotCommand(command = "/teacher")
+    public void teacherCommand(Update update) {
+        String teacherName = update.getMessage().getText().replace("/teacher ", "");
+//        var teacher = rozklad.getTeachers().entrySet().stream()
+//                .filter(entry -> entry.getValue().getName().equalsIgnoreCase(givenName))
+//                .findFirst()
+//                .orElse(null);
+//
+//        if (Objects.isNull(teacher)) {
+//            sendMessage(messageBuilder(update.getMessage().getChatId(), "Invalid teacher name"));
+//            return;
+//        }
+//
+//        var response = new StringBuilder();
+//        teacher.getValue().getRoz().forEach((k, v) -> {
+//            response.append(convertNumberOfDayToString(k)).append(":\n");
+//            v.forEach((kk, vv) ->
+//            {
+//                if (!vv.isEmpty()) {
+//                    response.append(kk).append(" - ")
+//                            .append(vv.getFirst().getCs())
+//                            .append(" | ")
+//                            .append(rozklad.getAuds().get(vv.getFirst().getA().toString()));
+//                    response.append("\n");
+//                }
+//
+//            });
+//            response.append("\n\n");
+//        });
+//        sendMessage(messageBuilder(update.getMessage().getChatId(), response.toString()));
+
+        String teacherId = rozklad.getTeachers().entrySet().stream()
+                .filter(entry -> entry.getValue().getName().equalsIgnoreCase(teacherName))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+        sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForTeacher(rozklad, teacherId)));
+    }
+
+    @BotCommand(command = "/grade")
+    public void gradeCommand(Update update) {
+        String gradeName = convertEngCharsIntoUkr(update.getMessage().getText().replace("/grade ", ""));
+        String gradeId = rozklad.getClasses().entrySet().stream()
+                .filter(entry -> entry.getValue().getName().equalsIgnoreCase(gradeName))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+        sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForGrade(rozklad, gradeId)));
+    }
+
+    @BotCommand(command = "/help")
+    public void helpCommand(Update update) {
+        sendMessage(messageBuilder(update.getMessage().getChatId(), "placeholder for help"));
+    }
+
+    @BotCommand(command = "/test")
+    public void testCommand(Update update) {
+        sendMessage(messageBuilder(update.getMessage().getChatId(), "placeholder for test"));
     }
 
     @Deprecated

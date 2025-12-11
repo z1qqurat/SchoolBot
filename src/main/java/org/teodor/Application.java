@@ -3,7 +3,7 @@ package org.teodor;
 import com.sun.net.httpserver.HttpServer;
 import lombok.extern.log4j.Log4j2;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
-import org.teodor.bot.TrackBogdanBot;
+import org.teodor.bot.SchoolScheduleBot;
 import org.teodor.config.ConfigManager;
 
 import java.io.IOException;
@@ -34,7 +34,7 @@ public class Application {
         log.info("HTTP server started on port {}", port);
 
         try (TelegramBotsLongPollingApplication botsApplication = new TelegramBotsLongPollingApplication()) {
-            botsApplication.registerBot(BOT_TOKEN, new TrackBogdanBot(BOT_TOKEN));
+            botsApplication.registerBot(BOT_TOKEN, new SchoolScheduleBot(BOT_TOKEN));
             log.info("SchoolBot has successfully started!");
             Thread.currentThread().join();
         } catch (Exception e) {
