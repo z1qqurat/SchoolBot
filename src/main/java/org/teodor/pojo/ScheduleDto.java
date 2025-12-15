@@ -10,7 +10,7 @@ import java.util.Map;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class RozkladDto {
+public class ScheduleDto {
     Integer week;
     String w_mode;
     Map<String, String> auds;

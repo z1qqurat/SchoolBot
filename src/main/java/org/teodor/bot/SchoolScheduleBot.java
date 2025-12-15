@@ -22,9 +22,20 @@ public class SchoolScheduleBot implements LongPollingSingleThreadUpdateConsumer 
     public void consume(Update update) {
         log.info(update.toString());
 
+        if (update.hasCallbackQuery()) {
+            responseHandler.handleCallbackQuery(update);
+            return;
+        }
         if (update.hasMessage() && update.getMessage().hasText()) {
+
+
+            if (update.getMessage().getText().startsWith(Commands.START.getText())) {
+                responseHandler.startCommand(update);
+                return;
+            }
+
             if (update.getMessage().getText().startsWith(Commands.DULE.getText())) {
-                responseHandler.rozkladCommand(update);
+                responseHandler.scheduleCommand(update);
                 return;
             }
 
@@ -35,6 +46,11 @@ public class SchoolScheduleBot implements LongPollingSingleThreadUpdateConsumer 
 
             if (update.getMessage().getText().startsWith(Commands.GRADE.getText())) {
                 responseHandler.gradeCommand(update);
+                return;
+            }
+
+            if (update.getMessage().getText().startsWith(Commands.TRACK.getText())) {
+                responseHandler.trackCommand(update);
                 return;
             }
 

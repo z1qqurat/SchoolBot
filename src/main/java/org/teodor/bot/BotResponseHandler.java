@@ -5,7 +5,6 @@ import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethodMess
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethodSerializable;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -14,12 +13,17 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 import org.teodor.annotation.BotCommand;
 import org.teodor.config.ConfigManager;
-import org.teodor.pojo.RozkladDto;
+import org.teodor.pojo.ScheduleDto;
+import org.teodor.pojo.classes.ClassDetailsDto;
+import org.teodor.pojo.teacher.TeacherDetailsDto;
+import org.teodor.util.CallbackQueryHandler;
 import org.teodor.util.JsonParser;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
-import static java.lang.Math.toIntExact;
 import static org.teodor.util.BotMessageBuilder.forwardMessageBuilder;
 import static org.teodor.util.BotMessageBuilder.messageBuilder;
 import static org.teodor.util.MapperHelper.convertEngCharsIntoUkr;
@@ -28,77 +32,141 @@ import static org.teodor.util.ScheduleHelper.getFormattedScheduleForTeacher;
 
 @Log4j2
 public class BotResponseHandler {
+
     private TelegramClient telegramClient;
-    private RozkladDto rozklad;
+    private ScheduleDto rozklad;
 
     public BotResponseHandler(TelegramClient telegramClient) {
         this.telegramClient = telegramClient;
-        rozklad = JsonParser.extractJsonRozkladFromFile();
+        rozklad = JsonParser.extractScheduleFromFile();
+//        rozklad = JsonParser.extractScheduleFromFile();
     }
 
     @BotCommand(command = "/predms")
     public void predmsCommand(Update update) {
 //        Map<String, Object> data = WebPageParser.extractJsonFromResponse();
-        RozkladDto data = JsonParser.extractJsonRozkladFromFile();
+        ScheduleDto data = JsonParser.extractScheduleFromFile();
         StringBuilder builder = new StringBuilder();
         data.getPredms().forEach((k, v) -> builder.append(k + " - " + v + "\n"));
 
         sendMessage(messageBuilder(update.getMessage().getChatId(), builder.toString()));
     }
 
+    @BotCommand(command = "/start")
+    public void startCommand(Update update) {
+        sendMessage(SendMessage
+                .builder()
+                .chatId(update.getMessage().getChatId())
+                .text("Вітаю!\nЯ бот для перегляду шкільного розкладу.\nЩоб дізнатись більше натисніть -> /help")
+                .protectContent(true)
+                .build());
+
+//        registerUser();
+    }
+
     @BotCommand(command = "/dule")
-    public void rozkladCommand(Update update) {
+    public void scheduleCommand(Update update) {
         sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForTeacher(rozklad, "96489")));
     }
 
     @BotCommand(command = "/teacher")
     public void teacherCommand(Update update) {
+        if (update.getMessage().getText().equals("/teacher")) {
+            sendMessage(messageBuilder(update.getMessage().getChatId(),
+                    "Будь ласка, введіть введіть частину/повне прізвище вчителя через пробіл після команди /teacher"));
+            return;
+        }
         String teacherName = update.getMessage().getText().replace("/teacher ", "");
-//        var teacher = rozklad.getTeachers().entrySet().stream()
-//                .filter(entry -> entry.getValue().getName().equalsIgnoreCase(givenName))
-//                .findFirst()
-//                .orElse(null);
-//
-//        if (Objects.isNull(teacher)) {
-//            sendMessage(messageBuilder(update.getMessage().getChatId(), "Invalid teacher name"));
-//            return;
-//        }
-//
-//        var response = new StringBuilder();
-//        teacher.getValue().getRoz().forEach((k, v) -> {
-//            response.append(convertNumberOfDayToString(k)).append(":\n");
-//            v.forEach((kk, vv) ->
-//            {
-//                if (!vv.isEmpty()) {
-//                    response.append(kk).append(" - ")
-//                            .append(vv.getFirst().getCs())
-//                            .append(" | ")
-//                            .append(rozklad.getAuds().get(vv.getFirst().getA().toString()));
-//                    response.append("\n");
-//                }
-//
-//            });
-//            response.append("\n\n");
-//        });
-//        sendMessage(messageBuilder(update.getMessage().getChatId(), response.toString()));
 
-        String teacherId = rozklad.getTeachers().entrySet().stream()
+        List<Map.Entry<String, TeacherDetailsDto>> teachers = rozklad.getTeachers().entrySet().stream()
+                .filter(entry -> entry.getValue().getName().contains(teacherName))
+                .toList();
+        String teacherId = teachers.stream()
                 .filter(entry -> entry.getValue().getName().equalsIgnoreCase(teacherName))
                 .map(Map.Entry::getKey)
                 .findFirst()
                 .orElse(null);
-        sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForTeacher(rozklad, teacherId)));
+        if (Objects.isNull(teacherId) && teachers.size() > 1) {
+            List<InlineKeyboardRow> rows = new ArrayList<>();
+            teachers.forEach(entry -> {
+                rows.add(new InlineKeyboardRow(InlineKeyboardButton
+                        .builder()
+                        .text(entry.getValue().getName())
+                        .callbackData("teacher_" + entry.getKey())
+                        .build()));
+            });
+            InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder().keyboard(rows).build();
+            sendMessage(SendMessage
+                    .builder()
+                    .chatId(update.getMessage().getChatId())
+                    .text("Ось список можливих вчителів:")
+                    .replyMarkup(inlineKeyboardMarkup)
+                    .build());
+
+//            AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery("id");
+//            answerCallbackQuery.setShowAlert(true);
+//            try {
+//                telegramClient.execute(answerCallbackQuery);
+//            } catch (TelegramApiException e) {
+//                throw new RuntimeException(e);
+//            }
+        } else {
+            sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForTeacher(rozklad, teacherId)));
+        }
+
     }
 
     @BotCommand(command = "/grade")
     public void gradeCommand(Update update) {
+        if (update.getMessage().getText().equals("/grade")) {
+            sendMessage(messageBuilder(update.getMessage().getChatId(),
+                    "Будь ласка, введіть частину/повну назву класу через пробіл після команди /teacher"));
+            return;
+        }
+
         String gradeName = convertEngCharsIntoUkr(update.getMessage().getText().replace("/grade ", ""));
-        String gradeId = rozklad.getClasses().entrySet().stream()
+        List<Map.Entry<String, ClassDetailsDto>> grades = rozklad.getClasses().entrySet().stream()
+                .filter(entry -> entry.getValue().getName().contains(gradeName))
+                .toList();
+        String gradeId = grades.stream()
                 .filter(entry -> entry.getValue().getName().equalsIgnoreCase(gradeName))
                 .map(Map.Entry::getKey)
                 .findFirst()
                 .orElse(null);
-        sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForGrade(rozklad, gradeId)));
+        if (Objects.isNull(gradeId) && grades.size() > 1) {
+            List<InlineKeyboardRow> rows = new ArrayList<>();
+            grades.forEach(entry -> {
+                rows.add(new InlineKeyboardRow(InlineKeyboardButton
+                        .builder()
+                        .text(entry.getValue().getName())
+                        .callbackData("grade_" + entry.getKey())
+                        .build()));
+            });
+            InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder().keyboard(rows).build();
+            sendMessage(SendMessage
+                    .builder()
+                    .chatId(update.getMessage().getChatId())
+                    .text("Ось список можливих класів:")
+                    .replyMarkup(inlineKeyboardMarkup)
+                    .build());
+        } else {
+            sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForGrade(rozklad, gradeId)));
+        }
+    }
+
+    @BotCommand(command = "/track")
+    public void trackCommand(Update update) {
+        InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder().keyboard(List.of(new InlineKeyboardRow(InlineKeyboardButton
+                        .builder()
+                        .text("Вчитель")
+                        .callbackData("track_teacher")
+                        .build()),
+                new InlineKeyboardRow(InlineKeyboardButton
+                        .builder()
+                        .text("Клас")
+                        .callbackData("track_grade")
+                        .build()))).build();
+        sendMessage(messageBuilder(update.getMessage().getChatId(), "Обери тип розкладу для відстеження:", inlineKeyboardMarkup));
     }
 
     @BotCommand(command = "/help")
@@ -111,40 +179,10 @@ public class BotResponseHandler {
         sendMessage(messageBuilder(update.getMessage().getChatId(), "placeholder for test"));
     }
 
-    @Deprecated
-    public void startCommand(Update update) {
-        sendMessage(SendMessage
-                .builder()
-                .chatId(update.getMessage().getChatId())
-                .text("Здарова")
-                .replyMarkup(InlineKeyboardMarkup
-                        .builder()
-                        .keyboardRow(
-                                new InlineKeyboardRow(InlineKeyboardButton
-                                        .builder()
-                                        .text("Update message text")
-                                        .callbackData("update_msg_text")
-                                        .build()
-                                )
-                        )
-                        .build())
-                .build());
-    }
-
-    @Deprecated
-    public void updateMsg(Update update) {
-        String callData = update.getCallbackQuery().getData();
-        long messageId = update.getCallbackQuery().getMessage().getMessageId();
-        long callbackChatId = update.getCallbackQuery().getMessage().getChatId();
-
-        if (callData.equals("update_msg_text")) {
-            String answer = "Updated message text";
-            EditMessageText newMessage = EditMessageText.builder()
-                    .chatId(callbackChatId)
-                    .messageId(toIntExact(messageId))
-                    .text(answer)
-                    .build();
-            sendMessage(newMessage);
+    public void handleCallbackQuery(Update update) {
+        BotApiMethodSerializable response = CallbackQueryHandler.handleCallbackQuery(rozklad, update);
+        if(Objects.nonNull(response)){
+            sendMessage(response);
         }
     }
 

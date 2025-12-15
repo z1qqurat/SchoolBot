@@ -69,14 +69,13 @@ dependencies {
     implementation("org.telegram:telegrambots-longpolling:9.2.0")
     implementation("org.telegram:telegrambots-abilities:9.2.0")
     implementation("org.telegram:telegrambots-client:9.2.0")
+    implementation("com.vdurmont:emoji-java:5.1.1")
 
 //    implementation("org.slf4j:slf4j-api:1.7.25")
 //    implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.24.3")
-
-    implementation("org.slf4j:slf4j-api:2.0.9")  // match your Log4j2 binding
-
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.24.3") // note: slf4j2-impl
-    implementation("org.apache.logging.log4j:log4j-core:2.24.3")         // Log4j2 core
+    implementation("org.slf4j:slf4j-api:2.0.9")
+    implementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.24.3")
+    implementation("org.apache.logging.log4j:log4j-core:2.24.3")
 
     testImplementation("io.rest-assured:rest-assured:3.0.0")
     testImplementation(platform("org.junit:junit-bom:5.10.0"))

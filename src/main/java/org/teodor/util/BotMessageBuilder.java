@@ -4,7 +4,11 @@ import lombok.experimental.UtilityClass;
 import org.telegram.telegrambots.meta.api.methods.ForwardMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+
+import static java.lang.Math.toIntExact;
 
 @UtilityClass
 public class BotMessageBuilder {
@@ -27,11 +31,34 @@ public class BotMessageBuilder {
                 .build();
     }
 
+    public static SendMessage messageBuilder(Long chatId, String messageText, InlineKeyboardMarkup inlineKeyboardMarkup) {
+        return SendMessage
+                .builder()
+                .chatId(chatId)
+                .text(messageText)
+                .replyMarkup(inlineKeyboardMarkup)
+                .build();
+    }
+
     public static ForwardMessage forwardMessageBuilder(Long fromChatId, Long toChatId, Integer messageId) {
         return ForwardMessage.builder()
                 .fromChatId(fromChatId)
                 .chatId(toChatId)
                 .messageId(messageId)
                 .build();
+    }
+
+    public static EditMessageText editMessageBuilder(Long callbackChatId, Long messageId, String messageText) {
+        return EditMessageText.builder()
+                .chatId(callbackChatId)
+                .messageId(toIntExact(messageId))
+                .text(messageText)
+                .build();
+    }
+
+    public static EditMessageText editMessageBuilder(Long callbackChatId, Long messageId, String messageText, InlineKeyboardMarkup inlineKeyboardMarkup) {
+        EditMessageText editMessageText = editMessageBuilder(callbackChatId, messageId, messageText);
+        editMessageText.setReplyMarkup(inlineKeyboardMarkup);
+        return editMessageText;
     }
 }

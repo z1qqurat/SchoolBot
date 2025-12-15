@@ -1,6 +1,6 @@
 package org.teodor.util;
 
-import org.teodor.pojo.RozkladDto;
+import org.teodor.pojo.ScheduleDto;
 import org.teodor.pojo.classes.ClassDetailsDto;
 import org.teodor.pojo.classes.LessonDto;
 import org.teodor.pojo.teacher.TeacherDetailsDto;
@@ -11,7 +11,7 @@ import static org.teodor.util.MapperHelper.getDayFromDayIndex;
 
 public class ScheduleHelper {
 
-    public static String getFormattedScheduleForTeacher(RozkladDto schedule, String teacherId) {
+    public static String getFormattedScheduleForTeacher(ScheduleDto schedule, String teacherId) {
         TeacherDetailsDto teacher = schedule.getTeachers().get(teacherId);
         if (Objects.isNull(teacher)) {
             return "Invalid teacher name";
@@ -37,7 +37,7 @@ public class ScheduleHelper {
         return response.toString();
     }
 
-    public static String getFormattedScheduleForGrade(RozkladDto schedule, String gradeId) {
+    public static String getFormattedScheduleForGrade(ScheduleDto schedule, String gradeId) {
         ClassDetailsDto grade = schedule.getClasses().get(gradeId);
         if (Objects.isNull(grade)) {
             return "Invalid grade name";
@@ -63,7 +63,7 @@ public class ScheduleHelper {
         return response.toString();
     }
 
-    private static StringBuilder getAuditInfo(RozkladDto schedule, LessonDto lesson) {
+    private static StringBuilder getAuditInfo(ScheduleDto schedule, LessonDto lesson) {
         StringBuilder response = new StringBuilder();
         var ref = new Object() {
             boolean groupFlag = lesson.getNums().size() > 1;
