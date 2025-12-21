@@ -10,7 +10,7 @@ public class ClientApiController {
     private static final String url = ConfigManager.getConfig().getClientApiUrl();
 
 
-    public String getRozklad(String userId) {
+    public String getSchedule() {
         return RestAssured
                 .given()
                 .relaxedHTTPSValidation()

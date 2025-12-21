@@ -13,11 +13,15 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 import org.teodor.annotation.BotCommand;
 import org.teodor.config.ConfigManager;
+import org.teodor.database.dto.UserDTO;
+import org.teodor.database.service.BackupScheduleService;
+import org.teodor.database.service.UserService;
 import org.teodor.pojo.ScheduleDto;
 import org.teodor.pojo.classes.ClassDetailsDto;
 import org.teodor.pojo.teacher.TeacherDetailsDto;
 import org.teodor.util.CallbackQueryHandler;
 import org.teodor.util.JsonParser;
+import org.teodor.util.WebPageParser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,39 +38,54 @@ import static org.teodor.util.ScheduleHelper.getFormattedScheduleForTeacher;
 public class BotResponseHandler {
 
     private TelegramClient telegramClient;
-    private ScheduleDto rozklad;
+    private ScheduleDto schedule;
+    private UserService userService;
+    private BackupScheduleService backupScheduleService;
 
     public BotResponseHandler(TelegramClient telegramClient) {
+        userService = new UserService();
+        backupScheduleService = new BackupScheduleService();
         this.telegramClient = telegramClient;
-        rozklad = JsonParser.extractScheduleFromFile();
-//        rozklad = JsonParser.extractScheduleFromFile();
+        schedule = backupScheduleService.updateBackupSchedule();
     }
 
-    @BotCommand(command = "/predms")
-    public void predmsCommand(Update update) {
-//        Map<String, Object> data = WebPageParser.extractJsonFromResponse();
-        ScheduleDto data = JsonParser.extractScheduleFromFile();
-        StringBuilder builder = new StringBuilder();
-        data.getPredms().forEach((k, v) -> builder.append(k + " - " + v + "\n"));
-
-        sendMessage(messageBuilder(update.getMessage().getChatId(), builder.toString()));
+    @BotCommand(command = "/manualupdate")
+    public void manualUpdate(Update update) {
+        if (update.getMessage().getChatId().equals(ConfigManager.getConfig().getAdminChatId())) {
+            schedule = backupScheduleService.updateBackupSchedule();
+            sendMessage(messageBuilder(update.getMessage().getChatId(), "Розклад було успішно оновлено вручну"));
+        }
     }
 
     @BotCommand(command = "/start")
     public void startCommand(Update update) {
+        String userName = update.getMessage().isUserMessage() ?
+                update.getMessage().getFrom().getUserName() : update.getMessage().getChat().getTitle();
+        userService.registerUser(update.getMessage().getChatId(), userName);
+
         sendMessage(SendMessage
                 .builder()
                 .chatId(update.getMessage().getChatId())
-                .text("Вітаю!\nЯ бот для перегляду шкільного розкладу.\nЩоб дізнатись більше натисніть -> /help")
+                .text("Вітаю, %s!\nЯ бот для перегляду шкільного розкладу.\nЩоб дізнатись більше натисніть -> /help".formatted(userName))
                 .protectContent(true)
                 .build());
-
-//        registerUser();
     }
 
     @BotCommand(command = "/dule")
     public void scheduleCommand(Update update) {
-        sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForTeacher(rozklad, "96489")));
+//        String trackingId = "96489";
+        UserDTO user = userService.getUser(update.getMessage().getChatId());
+        if (Objects.nonNull(user.getTrackingId())) {
+            if (user.isTeacher()) {
+                sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForTeacher(schedule, user.getTrackingId())));
+
+            } else {
+                sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForGrade(schedule, user.getTrackingId())));
+            }
+        } else {
+            sendMessage(messageBuilder(update.getMessage().getChatId(), "Ви не налаштували відстеження розкладу.\n" +
+                    "Використайте команду /track щоб обрати розклад для відстеження."));
+        }
     }
 
     @BotCommand(command = "/teacher")
@@ -78,7 +97,7 @@ public class BotResponseHandler {
         }
         String teacherName = update.getMessage().getText().replace("/teacher ", "");
 
-        List<Map.Entry<String, TeacherDetailsDto>> teachers = rozklad.getTeachers().entrySet().stream()
+        List<Map.Entry<String, TeacherDetailsDto>> teachers = schedule.getTeachers().entrySet().stream()
                 .filter(entry -> entry.getValue().getName().contains(teacherName))
                 .toList();
         String teacherId = teachers.stream()
@@ -111,7 +130,7 @@ public class BotResponseHandler {
 //                throw new RuntimeException(e);
 //            }
         } else {
-            sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForTeacher(rozklad, teacherId)));
+            sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForTeacher(schedule, teacherId)));
         }
 
     }
@@ -125,7 +144,7 @@ public class BotResponseHandler {
         }
 
         String gradeName = convertEngCharsIntoUkr(update.getMessage().getText().replace("/grade ", ""));
-        List<Map.Entry<String, ClassDetailsDto>> grades = rozklad.getClasses().entrySet().stream()
+        List<Map.Entry<String, ClassDetailsDto>> grades = schedule.getClasses().entrySet().stream()
                 .filter(entry -> entry.getValue().getName().contains(gradeName))
                 .toList();
         String gradeId = grades.stream()
@@ -150,7 +169,7 @@ public class BotResponseHandler {
                     .replyMarkup(inlineKeyboardMarkup)
                     .build());
         } else {
-            sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForGrade(rozklad, gradeId)));
+            sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForGrade(schedule, gradeId)));
         }
     }
 
@@ -180,8 +199,8 @@ public class BotResponseHandler {
     }
 
     public void handleCallbackQuery(Update update) {
-        BotApiMethodSerializable response = CallbackQueryHandler.handleCallbackQuery(rozklad, update);
-        if(Objects.nonNull(response)){
+        BotApiMethodSerializable response = CallbackQueryHandler.handleCallbackQuery(schedule, update, userService);
+        if (Objects.nonNull(response)) {
             sendMessage(response);
         }
     }

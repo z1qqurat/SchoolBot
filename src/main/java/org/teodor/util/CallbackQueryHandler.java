@@ -7,6 +7,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
+import org.teodor.database.service.UserService;
 import org.teodor.pojo.ScheduleDto;
 
 import java.util.ArrayList;
@@ -24,8 +25,7 @@ public class CallbackQueryHandler {
     private static LinkedHashMap<String, String> teachersMap = JsonParser.extractTeachersFromFile();
     private static LinkedHashMap<String, String> gradesMap = JsonParser.extractGradesFromFile();
 
-
-    public static BotApiMethodSerializable handleCallbackQuery(ScheduleDto rozklad, Update update) {
+    public static BotApiMethodSerializable handleCallbackQuery(ScheduleDto schedule, Update update, UserService userService) {
         CallbackQuery callbackQuery = update.getCallbackQuery();
         String callData = callbackQuery.getData();
         long messageId = update.getCallbackQuery().getMessage().getMessageId();
@@ -37,10 +37,6 @@ public class CallbackQueryHandler {
         }
 
         //grades block
-        if (callData.startsWith("track_grade_key_")) {
-            return handleTrackGradeKey(rozklad, callData, callbackChatId, messageId);
-        }
-
         if (callData.equals("track_grade")) {
             return handleTrackGradeNumber(callbackChatId, messageId);
         }
@@ -49,17 +45,21 @@ public class CallbackQueryHandler {
             return handleTrackGradeLetter(callData, callbackChatId, messageId);
         }
 
-        //teachers block
-        if (callData.startsWith("track_teacher_key_")) {
-            return handleTrackTeacherKey(rozklad, callData, callbackChatId, messageId);
+        if (callData.startsWith("track_grade_key_")) {
+            return handleTrackGradeKey(schedule, callData, callbackChatId, messageId, userService);
         }
 
+        //teachers block
         if (callData.equals("track_teacher")) {
             return handleTrackTeacher(callbackChatId, messageId);
         }
 
         if (callData.startsWith("track_teacher_page_")) {
             return handleTrackTeacherPageIndex(callData, callbackChatId, messageId);
+        }
+
+        if (callData.startsWith("track_teacher_key_")) {
+            return handleTrackTeacherKey(schedule, callData, callbackChatId, messageId, userService);
         }
 
         //testing
@@ -70,16 +70,18 @@ public class CallbackQueryHandler {
         return null;
     }
 
-    private static BotApiMethodSerializable handleTrackGradeKey(ScheduleDto rozklad, String callData, long callbackChatId, long messageId) {
+    private static BotApiMethodSerializable handleTrackGradeKey(ScheduleDto schedule, String callData, long callbackChatId, long messageId, UserService userService) {
         String gradeId = callData.split("track_grade_key_")[1];
-//            sendMessage(messageBuilder(callbackChatId, getFormattedScheduleForGrade(rozklad, gradeId)));
-        return editMessageBuilder(callbackChatId, messageId, getFormattedScheduleForGrade(rozklad, gradeId));
+//            sendMessage(messageBuilder(callbackChatId, getFormattedScheduleForGrade(schedule, gradeId)));
+        userService.updateTracking(callbackChatId, false, gradeId);
+        return editMessageBuilder(callbackChatId, messageId, getFormattedScheduleForGrade(schedule, gradeId));
     }
 
-    private static BotApiMethodSerializable handleTrackTeacherKey(ScheduleDto rozklad, String callData, long callbackChatId, long messageId) {
+    private static BotApiMethodSerializable handleTrackTeacherKey(ScheduleDto schedule, String callData, long callbackChatId, long messageId, UserService userService) {
         String teacherId = callData.split("track_teacher_key_")[1];
-//            sendMessage(messageBuilder(callbackChatId, getFormattedScheduleForTeacher(rozklad, gradeId)));
-        return editMessageBuilder(callbackChatId, messageId, getFormattedScheduleForTeacher(rozklad, teacherId));
+//            sendMessage(messageBuilder(callbackChatId, getFormattedScheduleForTeacher(schedule, gradeId)));
+        userService.updateTracking(callbackChatId, true, teacherId);
+        return editMessageBuilder(callbackChatId, messageId, getFormattedScheduleForTeacher(schedule, teacherId));
     }
 
     private static BotApiMethodSerializable handleTrackGradeNumber(long callbackChatId, long messageId) {
@@ -152,7 +154,6 @@ public class CallbackQueryHandler {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup(rows);
         return editMessageBuilder(callbackChatId, messageId, "Оберіть вчителя для відстеження:", inlineKeyboardMarkup);
     }
-
 
     private static InlineKeyboardButton buildKeyboardButton(String text, String callbackData) {
         return InlineKeyboardButton

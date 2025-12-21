@@ -83,6 +83,8 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testCompileOnly("org.projectlombok:lombok:1.18.42")
     testAnnotationProcessor("org.projectlombok:lombok:1.18.42")
+
+    implementation("org.postgresql:postgresql:42.7.8")
 }
 
 tasks.test {
