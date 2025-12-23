@@ -1,14 +1,20 @@
 package org.teodor.util;
 
+import lombok.experimental.UtilityClass;
 import org.teodor.pojo.ScheduleDto;
 import org.teodor.pojo.classes.ClassDetailsDto;
 import org.teodor.pojo.classes.LessonDto;
 import org.teodor.pojo.teacher.TeacherDetailsDto;
+import org.teodor.pojo.teacher.TeacherLessonDto;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import static org.teodor.util.MapperHelper.getDayFromDayIndex;
 
+@UtilityClass
 public class ScheduleHelper {
 
     public static String getFormattedScheduleForTeacher(ScheduleDto schedule, String teacherId) {
@@ -19,22 +25,32 @@ public class ScheduleHelper {
 
         StringBuilder response = new StringBuilder();
         teacher.getRoz().forEach((k, v) -> {
-            response.append(getDayFromDayIndex(k))
-                    .append(":\n");
-            v.forEach((kk, vv) ->
-            {
-                if (!vv.isEmpty()) {
-                    response.append(kk).append(" - ")
-                            .append(vv.getFirst().getCs())
-                            .append(" | ")
-                            .append(schedule.getAuds().get(vv.getFirst().getA().toString()));
-                    response.append("\n");
-                }
-
-            });
-            response.append("\n\n");
+            response.append(getTeacherFormattedScheduleForDay(schedule, k, v));
         });
         return response.toString();
+    }
+
+    public static StringBuilder getTeacherFormattedScheduleForDay(ScheduleDto schedule, String dayNumb, Map<String, List<TeacherLessonDto>> daySchedule) {
+        StringBuilder response = new StringBuilder();
+        response.append(getDayFromDayIndex(dayNumb))
+                .append(":\n");
+        daySchedule.forEach((k, v) ->
+        {
+            if (!v.isEmpty()) {
+                response.append(k).append(" - ")
+                        .append(v.getFirst().getCs())
+                        .append(" | ")
+                        .append(schedule.getAuds().get(v.getFirst().getA().toString()));
+                response.append("\n");
+            }
+
+        });
+        if (response.toString().contains("-")) {
+            response.append("\n\n");
+            return response;
+        } else {
+            return new StringBuilder();
+        }
     }
 
     public static String getFormattedScheduleForGrade(ScheduleDto schedule, String gradeId) {
@@ -45,25 +61,49 @@ public class ScheduleHelper {
 
         StringBuilder response = new StringBuilder();
         grade.getRoz().forEach((dayNumb, daySchedule) -> {
-            response.append(getDayFromDayIndex(dayNumb))
-                    .append(":\n");
-            daySchedule.forEach((lessonNumb, lessons) ->
-            {
-                if (!lessons.isEmpty()) {
-                    response.append(lessonNumb).append(" - ");
-                    lessons.forEach(lesson -> response.append(schedule.getPredms().get(lesson.getP().toString()))
-                                .append(" | ")
-                                .append(getAuditInfo(schedule, lesson))
-                                .append("\n"));
-                }
-
-            });
+            response.append(getGradeFormattedScheduleForDay(schedule, dayNumb, daySchedule));
             response.append("\n\n");
         });
         return response.toString();
     }
 
-    private static StringBuilder getAuditInfo(ScheduleDto schedule, LessonDto lesson) {
+    public static StringBuilder getGradeFormattedScheduleForDay(ScheduleDto schedule, String dayNumb, Map<String, List<LessonDto>> daySchedule) {
+        StringBuilder response = new StringBuilder();
+        response.append(getDayFromDayIndex(dayNumb))
+                .append(":\n");
+        daySchedule.forEach((lessonNumb, lessons) ->
+        {
+            if (!lessons.isEmpty()) {
+                response.append(lessonNumb).append(" - ");
+                lessons.forEach(lesson -> response.append(schedule.getPredms().get(lesson.getP().toString()))
+                        .append(" | ")
+                        .append(getAuditInfo(schedule, lesson))
+                        .append("\n"));
+            }
+
+        });
+        return response;
+    }
+
+    public static LinkedHashMap<String, String> getMappedTeachers(ScheduleDto schedule) {
+        LinkedHashMap<String, String> mappedTeachers = new LinkedHashMap<>();
+        schedule.getTeachers_sort().forEach(pid -> {
+            String teacherName = schedule.getTeachers().get(pid.toString()).getName();
+            mappedTeachers.put(pid.toString(), teacherName);
+        });
+        return mappedTeachers;
+    }
+
+    public static LinkedHashMap<String, String> getMappedGrades(ScheduleDto schedule) {
+        LinkedHashMap<String, String> mappedGrades = new LinkedHashMap<>();
+        schedule.getClasses_sort().forEach(pid -> {
+            String gradeName = schedule.getClasses().get(pid.toString()).getName();
+            mappedGrades.put(pid.toString(), gradeName);
+        });
+        return mappedGrades;
+    }
+
+    private StringBuilder getAuditInfo(ScheduleDto schedule, LessonDto lesson) {
         StringBuilder response = new StringBuilder();
         var ref = new Object() {
             boolean groupFlag = lesson.getNums().size() > 1;

@@ -7,4 +7,6 @@ public interface BackupScheduleDAO {
     BackupScheduleDTO find();
 
     void update(BackupScheduleDTO schedule);
+
+    void create(BackupScheduleDTO schedule);
 }

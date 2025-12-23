@@ -14,17 +14,16 @@ import java.sql.SQLException;
 public class BackupScheduleDAOImpl implements BackupScheduleDAO {
 
     private final DataSource dataSource;
+    private static final String LOG_MESSAGE = "Executing SQL statement: {}";
 
     public BackupScheduleDAOImpl(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
-
     @Override
     public BackupScheduleDTO find() {
         String sql = "SELECT * FROM backup_schedule";
-        log.info(sql);
-
+        log.info(LOG_MESSAGE, sql);
         try (Connection c = dataSource.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
 
@@ -42,10 +41,9 @@ public class BackupScheduleDAOImpl implements BackupScheduleDAO {
     @Override
     public void update(BackupScheduleDTO schedule) {
         String sql = """
-                    UPDATE backup_schedule
-                    SET raw_schedule = ?, hashcode = ?
-                """;
-
+                UPDATE backup_schedule
+                SET raw_schedule = ?, hashcode = ?""";
+        log.info(LOG_MESSAGE, sql);
         try (Connection c = dataSource.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, schedule.getRawSchedule());
@@ -53,6 +51,22 @@ public class BackupScheduleDAOImpl implements BackupScheduleDAO {
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException("update backup schedule failed: ", e);
+        }
+    }
+
+    @Override
+    public void create(BackupScheduleDTO schedule) {
+        String sql = """
+                INSERT INTO backup_schedule (raw_schedule, hashcode)
+                VALUES (?, ?)""";
+        log.info(LOG_MESSAGE, sql);
+        try (Connection c = dataSource.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, schedule.getRawSchedule());
+            ps.setInt(2, schedule.getHashcode());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataAccessException("add new backup schedule failed: ", e);
         }
     }
 }

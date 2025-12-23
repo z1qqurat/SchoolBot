@@ -18,7 +18,6 @@ import java.util.regex.Pattern;
 public class WebPageParser {
 
     public static ScheduleDto extractJsonFromResponse() {
-
         try {
             String responseHtml = new ClientApiController().getSchedule();
 
@@ -50,9 +49,6 @@ public class WebPageParser {
             throw new RuntimeException(e);
         }
     }
-
-
-
 
     @SneakyThrows
     public static String parseSchedule() {

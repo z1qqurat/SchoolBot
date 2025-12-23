@@ -3,7 +3,7 @@ package org.teodor.util;
 import lombok.experimental.UtilityClass;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
@@ -16,8 +16,7 @@ public class DateUtils {
                 .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
     }
 
-    public static String convertDateFormat(String inputDate) {
-        return LocalDateTime.parse(inputDate, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"))
-                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
+    public static String getDayOfWeek() {
+        return String.valueOf(LocalDate.now(ZoneId.of("Europe/Kyiv")).getDayOfWeek().getValue());
     }
 }

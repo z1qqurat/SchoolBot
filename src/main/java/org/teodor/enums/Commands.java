@@ -9,6 +9,7 @@ public enum Commands {
     START("/start", "Start"),
     MANUAL_UPDATE("/manualupdate", "Update schedule manually from datasource"),
     DULE("/dule", "Send your tracked schedule"),
+    TODAY("/today", "Send your schedule for today"),
     TEACHER("/teacher", "Select a teacher to get schedule"),
     GRADE("/grade", "Select a grade to get schedule"),
     TRACK("/track", "Select a grade/teacher to track"),

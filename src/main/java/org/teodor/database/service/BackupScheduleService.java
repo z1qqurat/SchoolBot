@@ -22,18 +22,37 @@ public class BackupScheduleService {
     public ScheduleDto updateBackupSchedule() {
 //        ScheduleDto scheduleDto = JsonParser.extractScheduleFromFile();
         ScheduleDto scheduleDto = WebPageParser.extractJsonFromResponse();
+
+        scheduleDto.getTeachers().values()
+                .forEach(teacher -> teacher
+                        .setName(teacher.getName()
+                                .trim()
+                                .replace(". ", ".")
+                                .replace("  ", " ")));
+
         BackupScheduleDTO oldBackupScheduleDTO = getBackup();
-
-        if (scheduleDto.hashCode() != oldBackupScheduleDTO.getHashcode()) {
+        if (oldBackupScheduleDTO == null) {
             ObjectMapper mapper = new ObjectMapper();
-
             BackupScheduleDTO newBackupScheduleDTO = null;
             try {
                 newBackupScheduleDTO = new BackupScheduleDTO()
                         .setRawSchedule(mapper.writeValueAsString(scheduleDto))
                         .setHashcode(scheduleDto.hashCode());
             } catch (JsonProcessingException e) {
-//                log.error("Failed to parse schedule to JSON string: ", e);
+                throw new RuntimeException(e);
+            }
+            backupScheduleDAO.create(newBackupScheduleDTO);
+            log.info("Old backup was not found. Added a new one: {}", scheduleDto.hashCode());
+            return scheduleDto;
+        }
+        if (scheduleDto.hashCode() != oldBackupScheduleDTO.getHashcode()) {
+            ObjectMapper mapper = new ObjectMapper();
+            BackupScheduleDTO newBackupScheduleDTO = null;
+            try {
+                newBackupScheduleDTO = new BackupScheduleDTO()
+                        .setRawSchedule(mapper.writeValueAsString(scheduleDto))
+                        .setHashcode(scheduleDto.hashCode());
+            } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
             backupScheduleDAO.update(newBackupScheduleDTO);

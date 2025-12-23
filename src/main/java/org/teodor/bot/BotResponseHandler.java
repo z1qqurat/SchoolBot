@@ -1,6 +1,7 @@
 package org.teodor.bot;
 
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.Strings;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethodMessage;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethodSerializable;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -18,21 +19,25 @@ import org.teodor.database.service.BackupScheduleService;
 import org.teodor.database.service.UserService;
 import org.teodor.pojo.ScheduleDto;
 import org.teodor.pojo.classes.ClassDetailsDto;
+import org.teodor.pojo.classes.RozDto;
 import org.teodor.pojo.teacher.TeacherDetailsDto;
+import org.teodor.pojo.teacher.TeacherRozDto;
 import org.teodor.util.CallbackQueryHandler;
-import org.teodor.util.JsonParser;
-import org.teodor.util.WebPageParser;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import static org.teodor.util.BotMessageBuilder.forwardMessageBuilder;
 import static org.teodor.util.BotMessageBuilder.messageBuilder;
+import static org.teodor.util.DateUtils.getDayOfWeek;
 import static org.teodor.util.MapperHelper.convertEngCharsIntoUkr;
 import static org.teodor.util.ScheduleHelper.getFormattedScheduleForGrade;
 import static org.teodor.util.ScheduleHelper.getFormattedScheduleForTeacher;
+import static org.teodor.util.ScheduleHelper.getGradeFormattedScheduleForDay;
+import static org.teodor.util.ScheduleHelper.getTeacherFormattedScheduleForDay;
 
 @Log4j2
 public class BotResponseHandler {
@@ -41,18 +46,22 @@ public class BotResponseHandler {
     private ScheduleDto schedule;
     private UserService userService;
     private BackupScheduleService backupScheduleService;
+    private CallbackQueryHandler callbackQueryHandler;
 
     public BotResponseHandler(TelegramClient telegramClient) {
         userService = new UserService();
         backupScheduleService = new BackupScheduleService();
         this.telegramClient = telegramClient;
         schedule = backupScheduleService.updateBackupSchedule();
+        LinkedHashMap<String, String> map = new LinkedHashMap<>();
+        callbackQueryHandler = new CallbackQueryHandler(schedule);
     }
 
     @BotCommand(command = "/manualupdate")
     public void manualUpdate(Update update) {
         if (update.getMessage().getChatId().equals(ConfigManager.getConfig().getAdminChatId())) {
             schedule = backupScheduleService.updateBackupSchedule();
+            callbackQueryHandler = new CallbackQueryHandler(schedule);
             sendMessage(messageBuilder(update.getMessage().getChatId(), "Розклад було успішно оновлено вручну"));
         }
     }
@@ -88,6 +97,29 @@ public class BotResponseHandler {
         }
     }
 
+    @BotCommand(command = "/today")
+    public void todayCommand(Update update) {
+        UserDTO user = userService.getUser(update.getMessage().getChatId());
+        if (Objects.nonNull(user.getTrackingId())) {
+            if (user.isTeacher()) {
+                TeacherRozDto teacherSchedule = schedule.getTeachers().get(user.getTrackingId()).getRoz();
+                String scheduleForToday = getTeacherFormattedScheduleForDay(schedule, getDayOfWeek(), teacherSchedule.get(getDayOfWeek())).toString();
+                if (!scheduleForToday.contains("-")) {
+                    sendMessage(messageBuilder(update.getMessage().getChatId(), "Сьогодні занять немає."));
+                } else {
+                    sendMessage(messageBuilder(update.getMessage().getChatId(), "Розклад на сьогодні:\n\n" + scheduleForToday));
+                }
+            } else {
+                RozDto gradeSchedule = schedule.getClasses().get(user.getTrackingId()).getRoz();
+                String scheduleForToday = getGradeFormattedScheduleForDay(schedule, getDayOfWeek(), gradeSchedule.get(getDayOfWeek())).toString();
+                sendMessage(messageBuilder(update.getMessage().getChatId(), "Розклад на сьогодні:\n\n" + scheduleForToday));
+            }
+        } else {
+            sendMessage(messageBuilder(update.getMessage().getChatId(), "Ви не налаштували відстеження розкладу.\n" +
+                    "Використайте команду /track щоб обрати розклад для відстеження."));
+        }
+    }
+
     @BotCommand(command = "/teacher")
     public void teacherCommand(Update update) {
         if (update.getMessage().getText().equals("/teacher")) {
@@ -98,22 +130,24 @@ public class BotResponseHandler {
         String teacherName = update.getMessage().getText().replace("/teacher ", "");
 
         List<Map.Entry<String, TeacherDetailsDto>> teachers = schedule.getTeachers().entrySet().stream()
-                .filter(entry -> entry.getValue().getName().contains(teacherName))
+                .filter(entry -> Strings.CI.contains(entry.getValue().getName(), teacherName))
                 .toList();
+        if (teachers.isEmpty()) {
+            sendMessage(messageBuilder(update.getMessage().getChatId(), "Вибачте, вчителя з таким прізвищем не знайдено."));
+        }
         String teacherId = teachers.stream()
                 .filter(entry -> entry.getValue().getName().equalsIgnoreCase(teacherName))
                 .map(Map.Entry::getKey)
                 .findFirst()
                 .orElse(null);
-        if (Objects.isNull(teacherId) && teachers.size() > 1) {
+        if (teacherId == null) {
             List<InlineKeyboardRow> rows = new ArrayList<>();
-            teachers.forEach(entry -> {
-                rows.add(new InlineKeyboardRow(InlineKeyboardButton
-                        .builder()
-                        .text(entry.getValue().getName())
-                        .callbackData("teacher_" + entry.getKey())
-                        .build()));
-            });
+            teachers.forEach(entry ->
+                    rows.add(new InlineKeyboardRow(InlineKeyboardButton
+                            .builder()
+                            .text(entry.getValue().getName())
+                            .callbackData("see_teacher_key_" + entry.getKey())
+                            .build())));
             InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder().keyboard(rows).build();
             sendMessage(SendMessage
                     .builder()
@@ -158,7 +192,7 @@ public class BotResponseHandler {
                 rows.add(new InlineKeyboardRow(InlineKeyboardButton
                         .builder()
                         .text(entry.getValue().getName())
-                        .callbackData("grade_" + entry.getKey())
+                        .callbackData("see_grade_" + entry.getKey())
                         .build()));
             });
             InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder().keyboard(rows).build();
@@ -199,7 +233,7 @@ public class BotResponseHandler {
     }
 
     public void handleCallbackQuery(Update update) {
-        BotApiMethodSerializable response = CallbackQueryHandler.handleCallbackQuery(schedule, update, userService);
+        BotApiMethodSerializable response = callbackQueryHandler.handleCallbackQuery(schedule, update, userService);
         if (Objects.nonNull(response)) {
             sendMessage(response);
         }
