@@ -1,4 +1,4 @@
-package org.teodor.bot;
+package org.teodor.bot.handler;
 
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.log4j.Log4j2;
@@ -23,7 +23,6 @@ import org.teodor.pojo.teacher.TeacherDetailsDto;
 import org.teodor.pojo.teacher.TeacherRozDto;
 import org.teodor.timer.CustomTimerTask;
 import org.teodor.timer.TimerExecutor;
-import org.teodor.util.CallbackQueryHandler;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -53,44 +52,11 @@ public class BotResponseHandler {
     public BotResponseHandler(TelegramClient telegramClient) {
         userService = new UserService();
         backupScheduleService = new BackupScheduleService();
-//        startScheduledTimer();
+        startScheduledTimer();
         this.telegramClient = telegramClient;
         schedule = backupScheduleService.updateBackupSchedule();
         LinkedHashMap<String, String> map = new LinkedHashMap<>();
         callbackQueryHandler = new CallbackQueryHandler(schedule);
-    }
-
-    private void startScheduledTimer() {
-        TimerExecutor.getInstance().startExecutionEveryDayAt(new CustomTimerTask("Notification timer", 9, 0, 0) {
-            @Override
-            public void execute() {
-                sendNotificationsToUsers();
-            }
-        });
-    }
-
-    private void sendNotificationsToUsers() {
-//        synchronized (Thread.currentThread()) {
-//            try {
-//                Thread.currentThread().wait(35);
-//            } catch (InterruptedException e) {
-//                log.error("Error sleeping for timer", e);
-//            }
-//        }
-//        userService.getAllNotificationUsers()
-//                .forEach(this::sendTodaySchedule);
-        List<UserDTO> usersList = userService.getAllNotificationUsers();
-        for (UserDTO user : usersList) {
-            synchronized (Thread.currentThread()) {
-                try {
-                    Thread.currentThread().wait(35);
-                } catch (InterruptedException e) {
-                    log.error("Error sleeping for alerts", e);
-                }
-            }
-            sendTodaySchedule(user);
-        }
-
     }
 
     @BotCommand(command = "/manualupdate")
@@ -132,7 +98,6 @@ public class BotResponseHandler {
 
     @BotCommand(command = "/dule")
     public void scheduleCommand(Update update) {
-//        String trackingId = "96489";
         UserDTO user = userService.getUser(update.getMessage().getChatId());
         if (Objects.nonNull(user.getTrackingId())) {
             if (user.isTeacher()) {
@@ -165,12 +130,12 @@ public class BotResponseHandler {
             if (!scheduleForToday.contains("-")) {
                 sendMessage(buildSendMessage(user.getId(), "Сьогодні занять немає."));
             } else {
-                sendMessage(buildSendMessage(user.getId(), "Розклад на сьогодні:\n\n" + scheduleForToday));
+                sendMessage(buildSendMessage(user.getId(), "*Розклад на сьогодні*\n\n" + scheduleForToday));
             }
         } else {
             RozDto gradeSchedule = schedule.getClasses().get(user.getTrackingId()).getRoz();
             String scheduleForToday = getGradeFormattedScheduleForDay(schedule, getDayOfWeek(), gradeSchedule.get(getDayOfWeek())).toString();
-            sendMessage(buildSendMessage(user.getId(), "Розклад на сьогодні:\n\n" + scheduleForToday));
+            sendMessage(buildSendMessage(user.getId(), "*Розклад на сьогодні*\n\n" + scheduleForToday));
         }
     }
 
@@ -269,7 +234,7 @@ public class BotResponseHandler {
         if (callData.startsWith("notif_")) {
             boolean booleanValue = Boolean.parseBoolean(callData.split("notif_")[1]);
             userService.updateNotification(callbackChatId, booleanValue);
-            sendMessage(callbackChatId,buildEditMessage(callbackChatId, messageId,
+            sendMessage(callbackChatId, buildEditMessage(callbackChatId, messageId,
                     (booleanValue ? EmojiParser.parseToUnicode(":bell:") : EmojiParser.parseToUnicode(":no_bell:"))
                             + "Ваші сповіщення "
                             + (booleanValue ? "*увімкнено*" : "*вимкнено*")));
@@ -277,6 +242,29 @@ public class BotResponseHandler {
         BotApiMethodSerializable response = callbackQueryHandler.handleCallbackQuery(schedule, update, userService);
         if (Objects.nonNull(response)) {
             sendMessage(callbackChatId, response);
+        }
+    }
+
+    private void startScheduledTimer() {
+        TimerExecutor.getInstance().scheduleDailyTask(new CustomTimerTask("Daily schedule notifier") {
+            @Override
+            public void execute() {
+                sendNotificationsToUsers();
+            }
+        }, 7, 30);
+    }
+
+    private void sendNotificationsToUsers() {
+        List<UserDTO> usersList = userService.getAllNotificationUsers();
+        for (UserDTO user : usersList) {
+            synchronized (Thread.currentThread()) {
+                try {
+                    Thread.currentThread().wait(35);
+                } catch (InterruptedException e) {
+                    log.error("Error sleeping for notification: ", e);
+                }
+            }
+            sendTodaySchedule(user);
         }
     }
 

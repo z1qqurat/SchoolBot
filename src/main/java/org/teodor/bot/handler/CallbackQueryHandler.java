@@ -1,4 +1,4 @@
-package org.teodor.util;
+package org.teodor.bot.handler;
 
 import com.vdurmont.emoji.EmojiParser;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethodSerializable;
@@ -8,6 +8,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.teodor.database.service.UserService;
 import org.teodor.pojo.ScheduleDto;
+import org.teodor.util.ScheduleHelper;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
