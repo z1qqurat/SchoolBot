@@ -17,5 +17,7 @@ public interface UserDAO {
 
     void update(UserDTO user);
 
+    void updateNotification(Long id, boolean isNotification);
+
     void deleteById(Long id);
 }

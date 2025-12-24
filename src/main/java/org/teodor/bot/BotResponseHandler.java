@@ -1,16 +1,15 @@
 package org.teodor.bot;
 
+import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.Strings;
-import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethodMessage;
 import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethodSerializable;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 import org.teodor.annotation.BotCommand;
 import org.teodor.config.ConfigManager;
@@ -22,6 +21,8 @@ import org.teodor.pojo.classes.ClassDetailsDto;
 import org.teodor.pojo.classes.RozDto;
 import org.teodor.pojo.teacher.TeacherDetailsDto;
 import org.teodor.pojo.teacher.TeacherRozDto;
+import org.teodor.timer.CustomTimerTask;
+import org.teodor.timer.TimerExecutor;
 import org.teodor.util.CallbackQueryHandler;
 
 import java.util.ArrayList;
@@ -30,8 +31,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static org.teodor.util.BotMessageBuilder.forwardMessageBuilder;
-import static org.teodor.util.BotMessageBuilder.messageBuilder;
+import static org.teodor.util.BotMessageBuilder.buildEditMessage;
+import static org.teodor.util.BotMessageBuilder.buildKeyboardButton;
+import static org.teodor.util.BotMessageBuilder.buildSendMessage;
 import static org.teodor.util.DateUtils.getDayOfWeek;
 import static org.teodor.util.MapperHelper.convertEngCharsIntoUkr;
 import static org.teodor.util.ScheduleHelper.getFormattedScheduleForGrade;
@@ -51,19 +53,67 @@ public class BotResponseHandler {
     public BotResponseHandler(TelegramClient telegramClient) {
         userService = new UserService();
         backupScheduleService = new BackupScheduleService();
+//        startScheduledTimer();
         this.telegramClient = telegramClient;
         schedule = backupScheduleService.updateBackupSchedule();
         LinkedHashMap<String, String> map = new LinkedHashMap<>();
         callbackQueryHandler = new CallbackQueryHandler(schedule);
     }
 
+    private void startScheduledTimer() {
+        TimerExecutor.getInstance().startExecutionEveryDayAt(new CustomTimerTask("Notification timer", 9, 0, 0) {
+            @Override
+            public void execute() {
+                sendNotificationsToUsers();
+            }
+        });
+    }
+
+    private void sendNotificationsToUsers() {
+//        synchronized (Thread.currentThread()) {
+//            try {
+//                Thread.currentThread().wait(35);
+//            } catch (InterruptedException e) {
+//                log.error("Error sleeping for timer", e);
+//            }
+//        }
+//        userService.getAllNotificationUsers()
+//                .forEach(this::sendTodaySchedule);
+        List<UserDTO> usersList = userService.getAllNotificationUsers();
+        for (UserDTO user : usersList) {
+            synchronized (Thread.currentThread()) {
+                try {
+                    Thread.currentThread().wait(35);
+                } catch (InterruptedException e) {
+                    log.error("Error sleeping for alerts", e);
+                }
+            }
+            sendTodaySchedule(user);
+        }
+
+    }
+
     @BotCommand(command = "/manualupdate")
-    public void manualUpdate(Update update) {
+    public void manualUpdateCommand(Update update) {
         if (update.getMessage().getChatId().equals(ConfigManager.getConfig().getAdminChatId())) {
             schedule = backupScheduleService.updateBackupSchedule();
             callbackQueryHandler = new CallbackQueryHandler(schedule);
-            sendMessage(messageBuilder(update.getMessage().getChatId(), "Розклад було успішно оновлено вручну"));
+            sendMessage(buildSendMessage(update.getMessage().getChatId(), "Розклад було успішно оновлено вручну"));
         }
+    }
+
+    @BotCommand(command = "/notif")
+    public void notifCommand(Update update) {
+        boolean isNotification = userService.getUser(update.getMessage().getChatId()).isNotification();
+
+        String msg = (isNotification ? EmojiParser.parseToUnicode(":bell:") : EmojiParser.parseToUnicode(":no_bell:"))
+                + "Ваші сповіщення "
+                + (isNotification ? "*увімкнено*" : "*вимкнено*");
+        InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
+                .keyboard(List.of(new InlineKeyboardRow(buildKeyboardButton(isNotification ? "Вимкнути" : "Увімкнути", "notif_" + !isNotification)))).build();
+
+        var msgg = buildSendMessage(update.getMessage().getChatId(), msg, inlineKeyboardMarkup);
+        sendMessage(msgg);
     }
 
     @BotCommand(command = "/start")
@@ -86,13 +136,13 @@ public class BotResponseHandler {
         UserDTO user = userService.getUser(update.getMessage().getChatId());
         if (Objects.nonNull(user.getTrackingId())) {
             if (user.isTeacher()) {
-                sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForTeacher(schedule, user.getTrackingId())));
+                sendMessage(buildSendMessage(update.getMessage().getChatId(), getFormattedScheduleForTeacher(schedule, user.getTrackingId())));
 
             } else {
-                sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForGrade(schedule, user.getTrackingId())));
+                sendMessage(buildSendMessage(update.getMessage().getChatId(), getFormattedScheduleForGrade(schedule, user.getTrackingId())));
             }
         } else {
-            sendMessage(messageBuilder(update.getMessage().getChatId(), "Ви не налаштували відстеження розкладу.\n" +
+            sendMessage(buildSendMessage(update.getMessage().getChatId(), "Ви не налаштували відстеження розкладу.\n" +
                     "Використайте команду /track щоб обрати розклад для відстеження."));
         }
     }
@@ -101,29 +151,33 @@ public class BotResponseHandler {
     public void todayCommand(Update update) {
         UserDTO user = userService.getUser(update.getMessage().getChatId());
         if (Objects.nonNull(user.getTrackingId())) {
-            if (user.isTeacher()) {
-                TeacherRozDto teacherSchedule = schedule.getTeachers().get(user.getTrackingId()).getRoz();
-                String scheduleForToday = getTeacherFormattedScheduleForDay(schedule, getDayOfWeek(), teacherSchedule.get(getDayOfWeek())).toString();
-                if (!scheduleForToday.contains("-")) {
-                    sendMessage(messageBuilder(update.getMessage().getChatId(), "Сьогодні занять немає."));
-                } else {
-                    sendMessage(messageBuilder(update.getMessage().getChatId(), "Розклад на сьогодні:\n\n" + scheduleForToday));
-                }
+            sendTodaySchedule(user);
+        } else {
+            sendMessage(buildSendMessage(update.getMessage().getChatId(), "Ви не налаштували відстеження розкладу.\n" +
+                    "Використайте команду /track щоб обрати розклад для відстеження."));
+        }
+    }
+
+    private void sendTodaySchedule(UserDTO user) {
+        if (user.isTeacher()) {
+            TeacherRozDto teacherSchedule = schedule.getTeachers().get(user.getTrackingId()).getRoz();
+            String scheduleForToday = getTeacherFormattedScheduleForDay(schedule, getDayOfWeek(), teacherSchedule.get(getDayOfWeek())).toString();
+            if (!scheduleForToday.contains("-")) {
+                sendMessage(buildSendMessage(user.getId(), "Сьогодні занять немає."));
             } else {
-                RozDto gradeSchedule = schedule.getClasses().get(user.getTrackingId()).getRoz();
-                String scheduleForToday = getGradeFormattedScheduleForDay(schedule, getDayOfWeek(), gradeSchedule.get(getDayOfWeek())).toString();
-                sendMessage(messageBuilder(update.getMessage().getChatId(), "Розклад на сьогодні:\n\n" + scheduleForToday));
+                sendMessage(buildSendMessage(user.getId(), "Розклад на сьогодні:\n\n" + scheduleForToday));
             }
         } else {
-            sendMessage(messageBuilder(update.getMessage().getChatId(), "Ви не налаштували відстеження розкладу.\n" +
-                    "Використайте команду /track щоб обрати розклад для відстеження."));
+            RozDto gradeSchedule = schedule.getClasses().get(user.getTrackingId()).getRoz();
+            String scheduleForToday = getGradeFormattedScheduleForDay(schedule, getDayOfWeek(), gradeSchedule.get(getDayOfWeek())).toString();
+            sendMessage(buildSendMessage(user.getId(), "Розклад на сьогодні:\n\n" + scheduleForToday));
         }
     }
 
     @BotCommand(command = "/teacher")
     public void teacherCommand(Update update) {
         if (update.getMessage().getText().equals("/teacher")) {
-            sendMessage(messageBuilder(update.getMessage().getChatId(),
+            sendMessage(buildSendMessage(update.getMessage().getChatId(),
                     "Будь ласка, введіть введіть частину/повне прізвище вчителя через пробіл після команди /teacher"));
             return;
         }
@@ -133,7 +187,7 @@ public class BotResponseHandler {
                 .filter(entry -> Strings.CI.contains(entry.getValue().getName(), teacherName))
                 .toList();
         if (teachers.isEmpty()) {
-            sendMessage(messageBuilder(update.getMessage().getChatId(), "Вибачте, вчителя з таким прізвищем не знайдено."));
+            sendMessage(buildSendMessage(update.getMessage().getChatId(), "Вибачте, вчителя з таким прізвищем не знайдено."));
         }
         String teacherId = teachers.stream()
                 .filter(entry -> entry.getValue().getName().equalsIgnoreCase(teacherName))
@@ -143,18 +197,8 @@ public class BotResponseHandler {
         if (teacherId == null) {
             List<InlineKeyboardRow> rows = new ArrayList<>();
             teachers.forEach(entry ->
-                    rows.add(new InlineKeyboardRow(InlineKeyboardButton
-                            .builder()
-                            .text(entry.getValue().getName())
-                            .callbackData("see_teacher_key_" + entry.getKey())
-                            .build())));
-            InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder().keyboard(rows).build();
-            sendMessage(SendMessage
-                    .builder()
-                    .chatId(update.getMessage().getChatId())
-                    .text("Ось список можливих вчителів:")
-                    .replyMarkup(inlineKeyboardMarkup)
-                    .build());
+                    rows.add(new InlineKeyboardRow(buildKeyboardButton(entry.getValue().getName(), "see_teacher_key_" + entry.getKey()))));
+            sendMessage(buildSendMessage(update.getMessage().getChatId(), "Ось список можливих вчителів:", InlineKeyboardMarkup.builder().keyboard(rows).build()));
 
 //            AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery("id");
 //            answerCallbackQuery.setShowAlert(true);
@@ -164,7 +208,7 @@ public class BotResponseHandler {
 //                throw new RuntimeException(e);
 //            }
         } else {
-            sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForTeacher(schedule, teacherId)));
+            sendMessage(buildSendMessage(update.getMessage().getChatId(), getFormattedScheduleForTeacher(schedule, teacherId)));
         }
 
     }
@@ -172,7 +216,7 @@ public class BotResponseHandler {
     @BotCommand(command = "/grade")
     public void gradeCommand(Update update) {
         if (update.getMessage().getText().equals("/grade")) {
-            sendMessage(messageBuilder(update.getMessage().getChatId(),
+            sendMessage(buildSendMessage(update.getMessage().getChatId(),
                     "Будь ласка, введіть частину/повну назву класу через пробіл після команди /teacher"));
             return;
         }
@@ -188,95 +232,77 @@ public class BotResponseHandler {
                 .orElse(null);
         if (Objects.isNull(gradeId) && grades.size() > 1) {
             List<InlineKeyboardRow> rows = new ArrayList<>();
-            grades.forEach(entry -> {
-                rows.add(new InlineKeyboardRow(InlineKeyboardButton
-                        .builder()
-                        .text(entry.getValue().getName())
-                        .callbackData("see_grade_" + entry.getKey())
-                        .build()));
-            });
-            InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder().keyboard(rows).build();
-            sendMessage(SendMessage
-                    .builder()
-                    .chatId(update.getMessage().getChatId())
-                    .text("Ось список можливих класів:")
-                    .replyMarkup(inlineKeyboardMarkup)
-                    .build());
+            grades.forEach(entry ->
+                    rows.add(new InlineKeyboardRow(buildKeyboardButton(entry.getValue().getName(), "see_grade_" + entry.getKey()))));
+            sendMessage(buildSendMessage(update.getMessage().getChatId(), "Ось список можливих класів:", InlineKeyboardMarkup.builder().keyboard(rows).build()));
         } else {
-            sendMessage(messageBuilder(update.getMessage().getChatId(), getFormattedScheduleForGrade(schedule, gradeId)));
+            sendMessage(buildSendMessage(update.getMessage().getChatId(), getFormattedScheduleForGrade(schedule, gradeId)));
         }
     }
 
     @BotCommand(command = "/track")
     public void trackCommand(Update update) {
-        InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder().keyboard(List.of(new InlineKeyboardRow(InlineKeyboardButton
-                        .builder()
-                        .text("Вчитель")
-                        .callbackData("track_teacher")
-                        .build()),
-                new InlineKeyboardRow(InlineKeyboardButton
-                        .builder()
-                        .text("Клас")
-                        .callbackData("track_grade")
-                        .build()))).build();
-        sendMessage(messageBuilder(update.getMessage().getChatId(), "Обери тип розкладу для відстеження:", inlineKeyboardMarkup));
+        InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
+                .keyboard(List.of(new InlineKeyboardRow(buildKeyboardButton("Вчитель", "track_teacher")),
+                        new InlineKeyboardRow(buildKeyboardButton("Клас", "track_grade")))).build();
+        sendMessage(buildSendMessage(update.getMessage().getChatId(), "Обери тип розкладу для відстеження:", inlineKeyboardMarkup));
     }
 
     @BotCommand(command = "/help")
     public void helpCommand(Update update) {
-        sendMessage(messageBuilder(update.getMessage().getChatId(), "placeholder for help"));
+        sendMessage(buildSendMessage(update.getMessage().getChatId(), "placeholder for help"));
     }
 
     @BotCommand(command = "/test")
     public void testCommand(Update update) {
-        sendMessage(messageBuilder(update.getMessage().getChatId(), "placeholder for test"));
+        sendMessage(buildSendMessage(update.getMessage().getChatId(), "placeholder for test"));
     }
 
     public void handleCallbackQuery(Update update) {
+
+        CallbackQuery callbackQuery = update.getCallbackQuery();
+        String callData = callbackQuery.getData();
+        long messageId = update.getCallbackQuery().getMessage().getMessageId();
+        long callbackChatId = update.getCallbackQuery().getMessage().getChatId();
+
+
+        if (callData.startsWith("notif_")) {
+            boolean booleanValue = Boolean.parseBoolean(callData.split("notif_")[1]);
+            userService.updateNotification(callbackChatId, booleanValue);
+            sendMessage(callbackChatId,buildEditMessage(callbackChatId, messageId,
+                    (booleanValue ? EmojiParser.parseToUnicode(":bell:") : EmojiParser.parseToUnicode(":no_bell:"))
+                            + "Ваші сповіщення "
+                            + (booleanValue ? "*увімкнено*" : "*вимкнено*")));
+        }
         BotApiMethodSerializable response = callbackQueryHandler.handleCallbackQuery(schedule, update, userService);
         if (Objects.nonNull(response)) {
-            sendMessage(response);
+            sendMessage(callbackChatId, response);
         }
-    }
-
-    public void forwardToAdmin(Update update) {
-        sendMessage(forwardMessageBuilder(
-                update.getMessage().getChat().getId(),
-                ConfigManager.getConfig().getAdminChatId(),
-                update.getMessage().getMessageId()
-        ));
     }
 
     private void sendMessage(SendMessage msg) {
         try {
             telegramClient.execute(msg);
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
+        } catch (TelegramApiRequestException e) {
+            log.warn("Error sending message: ", e);
+            if (e.getApiResponse().contains("Can't access the chat") || e.getApiResponse().contains("Bot was blocked by the user")) {
+                userService.deleteUser(msg.getChatId());
+            }
+        } catch (Exception e) {
+            log.error("Unknown error sending message: ", e);
         }
     }
 
-    private void sendPhoto(SendPhoto photo) {
-        try {
-            telegramClient.execute(photo);
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private void sendMessage(BotApiMethodSerializable msg) {
+    private void sendMessage(Long chatId, BotApiMethodSerializable msg) {
         try {
             telegramClient.execute(msg);
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private void sendMessage(BotApiMethodMessage msg) {
-        try {
-            log.info(msg);
-            telegramClient.execute(msg);
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
+        } catch (TelegramApiRequestException e) {
+            log.warn("Error sending message: ", e);
+            if (e.getApiResponse().contains("Can't access the chat") || e.getApiResponse().contains("Bot was blocked by the user")) {
+                userService.deleteUser(chatId);
+            }
+        } catch (Exception e) {
+            log.error("Unknown error sending message: ", e);
         }
     }
 }

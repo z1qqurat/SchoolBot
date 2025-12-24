@@ -79,8 +79,7 @@ public class UserDAOImpl implements UserDAO {
     public void save(UserDTO user) {
         String sql = """
                     INSERT INTO users (id, name, is_teacher, tracking_id, is_notification)
-                    VALUES (?, ?, ?, ?, ?)
-                """;
+                    VALUES (?, ?, ?, ?, ?)""";
         log.info(LOG_MESSAGE, sql);
         try (Connection c = dataSource.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -102,8 +101,7 @@ public class UserDAOImpl implements UserDAO {
         String sql = """
                     UPDATE users
                     SET name = ?, is_teacher = ?, tracking_id = ?, is_notification = ?
-                    WHERE id = ?
-                """;
+                    WHERE id = ?""";
         log.info(LOG_MESSAGE, sql);
         try (Connection c = dataSource.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -121,6 +119,23 @@ public class UserDAOImpl implements UserDAO {
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException("update user failed: ", e);
+        }
+    }
+
+    @Override
+    public void updateNotification(Long id, boolean isNotification) {
+        String sql = """
+                    UPDATE users
+                    SET is_notification = ?
+                    WHERE id = ?""";
+        log.info(LOG_MESSAGE, sql);
+        try (Connection c = dataSource.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setBoolean(1, isNotification);
+            ps.setLong(2, id);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataAccessException("update user notification failed: ", e);
         }
     }
 

@@ -29,7 +29,7 @@ public class SchoolScheduleBot implements LongPollingSingleThreadUpdateConsumer 
         if (update.hasMessage() && update.getMessage().hasText()) {
 
             if (update.getMessage().getText().startsWith(Commands.MANUAL_UPDATE.getText())) {
-                responseHandler.manualUpdate(update);
+                responseHandler.manualUpdateCommand(update);
                 return;
             }
 
@@ -40,6 +40,11 @@ public class SchoolScheduleBot implements LongPollingSingleThreadUpdateConsumer 
 
             if (update.getMessage().getText().startsWith(Commands.DULE.getText())) {
                 responseHandler.scheduleCommand(update);
+                return;
+            }
+
+            if (update.getMessage().getText().startsWith(Commands.NOTIF.getText())) {
+                responseHandler.notifCommand(update);
                 return;
             }
 

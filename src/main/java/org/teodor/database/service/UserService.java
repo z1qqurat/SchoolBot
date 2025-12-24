@@ -31,6 +31,14 @@ public class UserService {
         userDao.update(user);
     }
 
+    public void updateNotification(Long id, boolean isNotification) {
+        userDao.findById(id).ifPresent(user -> {
+            if (isNotification != user.isNotification()) {
+                userDao.updateNotification(id, isNotification);
+            }
+        });
+    }
+
     public UserDTO getUser(Long id) {
         return userDao.findById(id).orElse(new UserDTO());
     }
@@ -43,11 +51,18 @@ public class UserService {
         return userDao.findAllWithActiveNotification();
     }
 
+    public void deleteUser(Long id){
+        userDao.deleteById(id);
+    }
+
+    public void deleteUser(String id){
+        userDao.deleteById(Long.parseLong(id));
+    }
+
     private UserDTO generateBaseUser(Long id) {
         UserDTO user = new UserDTO();
         user.setId(id);
         user.setNotification(false);
         return user;
-
     }
 }
