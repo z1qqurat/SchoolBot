@@ -40,9 +40,7 @@ public class BackupScheduleDAOImpl implements BackupScheduleDAO {
 
     @Override
     public void update(BackupScheduleDTO schedule) {
-        String sql = """
-                UPDATE backup_schedule
-                SET raw_schedule = ?, hashcode = ?""";
+        String sql = "UPDATE backup_schedule SET raw_schedule = ?, hashcode = ?";
         log.info(LOG_MESSAGE, sql);
         try (Connection c = dataSource.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -56,9 +54,7 @@ public class BackupScheduleDAOImpl implements BackupScheduleDAO {
 
     @Override
     public void create(BackupScheduleDTO schedule) {
-        String sql = """
-                INSERT INTO backup_schedule (raw_schedule, hashcode)
-                VALUES (?, ?)""";
+        String sql = "INSERT INTO backup_schedule (raw_schedule, hashcode) VALUES (?, ?)";
         log.info(LOG_MESSAGE, sql);
         try (Connection c = dataSource.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {

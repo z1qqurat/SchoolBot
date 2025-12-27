@@ -1,5 +1,8 @@
 package org.teodor.util;
 
+import java.util.Map;
+import java.util.Objects;
+
 public class MapperHelper {
 
     public static String getDayFromDayIndex(String dayIndex) {
@@ -31,4 +34,15 @@ public class MapperHelper {
                 .replace("h", "н")
                 .replace("H", "Н");
     }
+
+    public static <K, V> K getKeyByValue(Map<K, V> map, V value) {
+        for (Map.Entry<K, V> entry : map.entrySet()) {
+            // Use Objects.equals() to handle potential null values safely
+            if (Objects.equals(value, entry.getValue())) {
+                return entry.getKey();
+            }
+        }
+        return null; // Return null if the value is not found
+    }
+
 }

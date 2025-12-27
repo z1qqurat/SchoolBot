@@ -73,7 +73,7 @@ public class BotResponseHandler {
         boolean isNotification = userService.getUser(update.getMessage().getChatId()).isNotification();
 
         String msg = (isNotification ? EmojiParser.parseToUnicode(":bell:") : EmojiParser.parseToUnicode(":no_bell:"))
-                + "Ваші сповіщення "
+                + " Ваші сповіщення "
                 + (isNotification ? "*увімкнено*" : "*вимкнено*");
         InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
                 .keyboard(List.of(new InlineKeyboardRow(buildKeyboardButton(isNotification ? "Вимкнути" : "Увімкнути", "notif_" + !isNotification)))).build();
@@ -86,12 +86,14 @@ public class BotResponseHandler {
     public void startCommand(Update update) {
         String userName = update.getMessage().isUserMessage() ?
                 update.getMessage().getFrom().getUserName() : update.getMessage().getChat().getTitle();
-        userService.registerUser(update.getMessage().getChatId(), userName);
+        String firstName = update.getMessage().isUserMessage() ?
+                update.getMessage().getFrom().getFirstName() : update.getMessage().getChat().getTitle();
+        userService.registerUser(update.getMessage().getChatId(), userName, firstName);
 
         sendMessage(SendMessage
                 .builder()
                 .chatId(update.getMessage().getChatId())
-                .text("Вітаю, %s!\nЯ бот для перегляду шкільного розкладу.\nЩоб дізнатись більше натисніть -> /help".formatted(userName))
+                .text("Вітаю, %s!\nЯ бот для перегляду шкільного розкладу.\nЩоб дізнатись більше натисніть -> /help".formatted(firstName))
                 .protectContent(true)
                 .build());
     }
@@ -143,11 +145,16 @@ public class BotResponseHandler {
     public void teacherCommand(Update update) {
         if (update.getMessage().getText().equals("/teacher")) {
             sendMessage(buildSendMessage(update.getMessage().getChatId(),
-                    "Будь ласка, введіть введіть частину/повне прізвище вчителя через пробіл після команди /teacher"));
+                    "Будь ласка, введіть введіть частину/повне прізвище(мінімум 3 літери) вчителя через пробіл після команди.\nПриклад 1: /teacher Іва\nПриклад 2: /teacher Іванишин О.М."));
             return;
         }
         String teacherName = update.getMessage().getText().replace("/teacher ", "");
 
+        if (teacherName.length() < 3) {
+            sendMessage(buildSendMessage(update.getMessage().getChatId(),
+                    "Будь ласка, введіть мінімум 3 літери прізвища вчителя."));
+            return;
+        }
         List<Map.Entry<String, TeacherDetailsDto>> teachers = schedule.getTeachers().entrySet().stream()
                 .filter(entry -> Strings.CI.contains(entry.getValue().getName(), teacherName))
                 .toList();
@@ -182,13 +189,13 @@ public class BotResponseHandler {
     public void gradeCommand(Update update) {
         if (update.getMessage().getText().equals("/grade")) {
             sendMessage(buildSendMessage(update.getMessage().getChatId(),
-                    "Будь ласка, введіть частину/повну назву класу через пробіл після команди /teacher"));
+                    "Будь ласка, введіть частину/повну назву класу через пробіл після команди /grade"));
             return;
         }
 
         String gradeName = convertEngCharsIntoUkr(update.getMessage().getText().replace("/grade ", ""));
         List<Map.Entry<String, ClassDetailsDto>> grades = schedule.getClasses().entrySet().stream()
-                .filter(entry -> entry.getValue().getName().contains(gradeName))
+                .filter(entry -> Strings.CI.contains(entry.getValue().getName(), gradeName))
                 .toList();
         String gradeId = grades.stream()
                 .filter(entry -> entry.getValue().getName().equalsIgnoreCase(gradeName))
@@ -220,23 +227,23 @@ public class BotResponseHandler {
 
     @BotCommand(command = "/test")
     public void testCommand(Update update) {
-        sendMessage(buildSendMessage(update.getMessage().getChatId(), "placeholder for test"));
+        if (update.getMessage().getChatId().equals(ConfigManager.getConfig().getAdminChatId())) {
+            sendMessage(buildSendMessage(update.getMessage().getChatId(), "placeholder for test"));
+        }
     }
 
     public void handleCallbackQuery(Update update) {
-
         CallbackQuery callbackQuery = update.getCallbackQuery();
         String callData = callbackQuery.getData();
         long messageId = update.getCallbackQuery().getMessage().getMessageId();
         long callbackChatId = update.getCallbackQuery().getMessage().getChatId();
-
 
         if (callData.startsWith("notif_")) {
             boolean booleanValue = Boolean.parseBoolean(callData.split("notif_")[1]);
             userService.updateNotification(callbackChatId, booleanValue);
             sendMessage(callbackChatId, buildEditMessage(callbackChatId, messageId,
                     (booleanValue ? EmojiParser.parseToUnicode(":bell:") : EmojiParser.parseToUnicode(":no_bell:"))
-                            + "Ваші сповіщення "
+                            + " Ваші сповіщення "
                             + (booleanValue ? "*увімкнено*" : "*вимкнено*")));
         }
         BotApiMethodSerializable response = callbackQueryHandler.handleCallbackQuery(schedule, update, userService);

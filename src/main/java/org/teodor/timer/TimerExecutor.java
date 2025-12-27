@@ -4,10 +4,14 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Calendar;
+import java.time.Duration;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import static org.teodor.util.DateUtils.isWeekend;
 
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -38,28 +42,47 @@ public class TimerExecutor {
                 log.error("Bot threw an unexpected exception at TimerExecutor: ", e);
             }
         };
-        long initialDelay = calculateInitialDelay(targetHour, targetMin);
+        long initialDelay = calculateNextWeekdayDelay(targetHour, targetMin);
         long period = TimeUnit.DAYS.toMillis(1);
         executorService.scheduleAtFixedRate(taskWrapper, initialDelay, period, TimeUnit.MILLISECONDS);
     }
 
-    private long calculateInitialDelay(int targetHour, int targetMin) {
-        Calendar midnight = Calendar.getInstance();
-        midnight.set(Calendar.HOUR_OF_DAY, targetHour);
-        midnight.set(Calendar.MINUTE, targetMin);
-        midnight.set(Calendar.SECOND, 0);
-        midnight.set(Calendar.MILLISECOND, 0);
+//    private long calculateInitialDelay(int targetHour, int targetMin) {
+//        Calendar nextNotification = Calendar.getInstance(TimeZone.getTimeZone(ZoneId.of("Europe/Kyiv")));
+//        nextNotification.set(Calendar.HOUR_OF_DAY, targetHour);
+//        nextNotification.set(Calendar.MINUTE, targetMin);
+//        nextNotification.set(Calendar.SECOND, 0);
+//        nextNotification.set(Calendar.MILLISECOND, 0);
+//
+//        Calendar now = Calendar.getInstance(TimeZone.getTimeZone(ZoneId.of("Europe/Kyiv")));
+//        String dayOfWeek = DateUtils.getDayOfWeek();
+//        if (dayOfWeek.equals("6") || dayOfWeek.equals("7")) {
+//            int daysToAdd = (8 - now.get(Calendar.DAY_OF_WEEK)) % 7;
+//            nextNotification.add(Calendar.DATE, daysToAdd);
+//        } else if (now.after(nextNotification)) {
+//            nextNotification.add(Calendar.DATE, 1);
+//        }
+//
+//        long initialDelay = nextNotification.getTimeInMillis() - now.getTimeInMillis();
+//        return initialDelay;
+//    }
 
-        Calendar now = Calendar.getInstance();
+    private long calculateNextWeekdayDelay(int hour, int minute) {
+        ZoneId zone = ZoneId.of("Europe/Kyiv");
+        ZonedDateTime now = ZonedDateTime.now(zone);
 
-        if (now.after(midnight)) {
-            midnight.add(Calendar.DATE, 1);
+        ZonedDateTime nextRun = now.withHour(hour)
+                .withMinute(minute)
+                .withSecond(0)
+                .withNano(0);
+        if (!now.isBefore(nextRun)) {
+            nextRun = nextRun.plusDays(1);
         }
-
-        long initialDelay = midnight.getTimeInMillis() - now.getTimeInMillis();
-        return initialDelay;
+        if (isWeekend(nextRun)) {
+            nextRun = nextRun.plusDays(1);
+        }
+        return Duration.between(now, nextRun).toMillis();
     }
-
 
     /**
      * Stop the thread

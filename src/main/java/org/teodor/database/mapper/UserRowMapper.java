@@ -12,7 +12,8 @@ public class UserRowMapper {
     public UserDTO map(ResultSet rs) throws SQLException {
         UserDTO user = new UserDTO();
         user.setId(rs.getLong("id"));
-        user.setName(rs.getString("name"));
+        user.setUsername(rs.getString("username"));
+        user.setFirstName(rs.getString("first_name"));
         user.setTeacher(rs.getBoolean("is_teacher"));
         user.setTrackingId(rs.getString("tracking_id"));
         user.setNotification(rs.getBoolean("is_notification"));
@@ -25,7 +26,8 @@ public class UserRowMapper {
         while (rs.next()) {
             UserDTO user = new UserDTO();
             user.setId(rs.getLong("id"));
-            user.setName(rs.getString("name"));
+            user.setUsername(rs.getString("username"));
+            user.setFirstName(rs.getString("first_name"));
             user.setTeacher(rs.getBoolean("is_teacher"));
             user.setTrackingId(rs.getString("tracking_id"));
             user.setNotification(rs.getBoolean("is_notification"));

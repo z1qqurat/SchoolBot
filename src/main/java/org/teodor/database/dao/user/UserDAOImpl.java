@@ -77,18 +77,17 @@ public class UserDAOImpl implements UserDAO {
 
     @Override
     public void save(UserDTO user) {
-        String sql = """
-                    INSERT INTO users (id, name, is_teacher, tracking_id, is_notification)
-                    VALUES (?, ?, ?, ?, ?)""";
+        String sql = "INSERT INTO users (id, username, first_name, is_teacher, tracking_id, is_notification) VALUES (?, ?, ?, ?, ?, ?)";
         log.info(LOG_MESSAGE, sql);
         try (Connection c = dataSource.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
 
             ps.setLong(1, user.getId());
-            ps.setString(2, user.getName());
-            ps.setBoolean(3, user.isTeacher());
-            ps.setString(4, user.getTrackingId());
-            ps.setBoolean(5, user.isNotification());
+            ps.setString(2, user.getUsername());
+            ps.setString(3, user.getFirstName());
+            ps.setBoolean(4, user.isTeacher());
+            ps.setString(5, user.getTrackingId());
+            ps.setBoolean(6, user.isNotification());
             ps.executeUpdate();
 
         } catch (SQLException e) {
@@ -98,24 +97,23 @@ public class UserDAOImpl implements UserDAO {
 
     @Override
     public void update(UserDTO user) {
-        String sql = """
-                    UPDATE users
-                    SET name = ?, is_teacher = ?, tracking_id = ?, is_notification = ?
-                    WHERE id = ?""";
+        String sql = "UPDATE users SET username = ?, first_name = ?, is_teacher = ?, tracking_id = ?, is_notification = ? WHERE id = ?";
         log.info(LOG_MESSAGE, sql);
         try (Connection c = dataSource.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
-            if (Objects.nonNull(user.getName())) {
-                ps.setString(1, user.getName());
+            ps.setString(1, user.getUsername());
 
+            if (Objects.nonNull(user.getFirstName())) {
+                ps.setString(2, user.getFirstName());
             }
-            ps.setBoolean(2, user.isTeacher());
+
+            ps.setBoolean(3, user.isTeacher());
             if (Objects.nonNull(user.getTrackingId())) {
-                ps.setString(3, user.getTrackingId());
+                ps.setString(4, user.getTrackingId());
 
             }
-            ps.setBoolean(4, user.isNotification());
-            ps.setLong(5, user.getId());
+            ps.setBoolean(5, user.isNotification());
+            ps.setLong(6, user.getId());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException("update user failed: ", e);
@@ -124,10 +122,7 @@ public class UserDAOImpl implements UserDAO {
 
     @Override
     public void updateNotification(Long id, boolean isNotification) {
-        String sql = """
-                    UPDATE users
-                    SET is_notification = ?
-                    WHERE id = ?""";
+        String sql = "UPDATE users SET is_notification = ? WHERE id = ?";
         log.info(LOG_MESSAGE, sql);
         try (Connection c = dataSource.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {

@@ -1,5 +1,6 @@
 package org.teodor.database.service;
 
+import org.apache.logging.log4j.util.Strings;
 import org.teodor.database.DataSourceProvider;
 import org.teodor.database.dao.user.UserDAO;
 import org.teodor.database.dao.user.UserDAOImpl;
@@ -15,11 +16,9 @@ public class UserService {
         userDao = new UserDAOImpl(DataSourceProvider.get());
     }
 
-    public UserDTO registerUser(Long id, String name) {
+    public UserDTO registerUser(Long id, String username, String firstName) {
         userDao.deleteById(id);
-
-        UserDTO user = generateBaseUser(id).setName(name);
-
+        UserDTO user = generateBaseUser(id).setUsername(username).setFirstName(firstName);
         userDao.save(user);
         return user;
     }
@@ -51,17 +50,18 @@ public class UserService {
         return userDao.findAllWithActiveNotification();
     }
 
-    public void deleteUser(Long id){
+    public void deleteUser(Long id) {
         userDao.deleteById(id);
     }
 
-    public void deleteUser(String id){
+    public void deleteUser(String id) {
         userDao.deleteById(Long.parseLong(id));
     }
 
     private UserDTO generateBaseUser(Long id) {
         UserDTO user = new UserDTO();
         user.setId(id);
+        user.setFirstName(Strings.EMPTY);
         user.setNotification(false);
         return user;
     }

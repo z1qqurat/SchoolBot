@@ -16,7 +16,9 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class UserDTO {
     private Long id;
-    private String name;
+    private String username;
+    @JsonProperty("first_name")
+    private String firstName;
     @JsonProperty("is_teacher")
     private boolean isTeacher;
     @JsonProperty("tracking_id")

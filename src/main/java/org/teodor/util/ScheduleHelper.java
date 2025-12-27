@@ -24,9 +24,11 @@ public class ScheduleHelper {
         }
 
         StringBuilder response = new StringBuilder();
+        response.append("%s```Розклад\n".formatted(teacher.getName()));
         teacher.getRoz().forEach((k, v) -> {
             response.append(getTeacherFormattedScheduleForDay(schedule, k, v));
         });
+        response.append("```");
         return response.toString();
     }
 
@@ -34,18 +36,29 @@ public class ScheduleHelper {
         StringBuilder response = new StringBuilder();
         response.append(getDayFromDayIndex(dayNumb))
                 .append(":\n");
-        daySchedule.forEach((k, v) ->
+        daySchedule.forEach((lessonNumb, lessons) ->
         {
-            if (!v.isEmpty()) {
-                response.append(k).append(" - ")
-                        .append(v.getFirst().getCs())
-                        .append(" | ")
-                        .append(schedule.getAuds().get(v.getFirst().getA().toString()));
-                response.append("\n");
+//            String row = "%s - %-4s | %s\n";
+            String row = "%s | %-8s | %s\n";
+            if (!lessons.isEmpty()) {
+//                response.append(lessonNumb).append(" - ")
+//                        .append(lessons.getFirst().getCs())
+//                        .append(" | ")
+//                        .append(schedule.getAuds().get(lessons.getFirst().getA().toString()));
+//                response.append("\n");
+
+
+//                response.append(row.formatted(lessonNumb, lessons.getFirst().getCs(), schedule.getAuds().get(lessons.getFirst().getA().toString())));
+                response.append(row.formatted(lessonNumb, schedule.getAuds().get(lessons.getFirst().getA().toString()), lessons.getFirst().getCs()));
+
+
+                //                response.append(lessonNumb).append(" - ");
+//                lessons.forEach(lesson -> response.append(row.formatted(schedule.getPredms().get(lesson.getP().toString()),
+//                        getAuditInfo(schedule, lesson))));
             }
 
         });
-        if (response.toString().contains("-")) {
+        if (response.toString().contains("|")) {
             response.append("\n\n");
             return response;
         } else {
@@ -60,10 +73,12 @@ public class ScheduleHelper {
         }
 
         StringBuilder response = new StringBuilder();
+        response.append("```%s\n".formatted(grade.getName()));
         grade.getRoz().forEach((dayNumb, daySchedule) -> {
             response.append(getGradeFormattedScheduleForDay(schedule, dayNumb, daySchedule));
             response.append("\n\n");
         });
+        response.append("```");
         return response.toString();
     }
 
@@ -73,14 +88,28 @@ public class ScheduleHelper {
                 .append(":\n");
         daySchedule.forEach((lessonNumb, lessons) ->
         {
+//            String singleRow = "%-29s | %s\n";
+//            String doubleRow = "%-29s (гр.2) | %s\n" + "    %-29s (гр.2) | %s\n";
+            String singleRow = "%-8s | %s\n";
+            String doubleRow = "%-8s | %s (гр.1)\n" + "    %-8s | %s (гр.2)\n";
             if (!lessons.isEmpty()) {
-                response.append(lessonNumb).append(" - ");
-                lessons.forEach(lesson -> response.append(schedule.getPredms().get(lesson.getP().toString()))
-                        .append(" | ")
-                        .append(getAuditInfo(schedule, lesson))
-                        .append("\n"));
+                response.append(lessonNumb).append(" | ");
+//                lessons.forEach(lesson -> response.append(schedule.getPredms().get(lesson.getP().toString()))
+//                        .append(" | ")
+//                        .append(getAuditInfo(schedule, lesson))
+//                        .append("\n"));
+                if (lessons.size() == 1) {
+//                    lessons.forEach(lesson -> response.append(singleRow.formatted(schedule.getPredms().get(lesson.getP().toString()),
+//                            getAuditInfo(schedule, lesson))));
+                    lessons.forEach(lesson -> response.append(singleRow.formatted(getAuditInfo(schedule, lesson), schedule.getPredms().get(lesson.getP().toString()))));
+                } else {
+//                    response.append(doubleRow.formatted(schedule.getPredms().get(lessons.get(0).getP().toString()),
+//                            getAuditInfo(schedule, lessons.get(0)),schedule.getPredms().get(lessons.get(1).getP().toString()),
+//                            getAuditInfo(schedule, lessons.get(1))));
+                    response.append(doubleRow.formatted(getAuditInfo(schedule, lessons.get(0)), schedule.getPredms().get(lessons.get(0).getP().toString()),
+                            getAuditInfo(schedule, lessons.get(1)), schedule.getPredms().get(lessons.get(1).getP().toString())));
+                }
             }
-
         });
         return response;
     }
@@ -111,7 +140,7 @@ public class ScheduleHelper {
 
         lesson.getNums().forEach(num -> {
             Integer audId = num.getA();
-            response.append(audId.equals(0) ? "Невідомо" : schedule.getAuds().get(audId.toString()));
+            response.append(audId.equals(0) ? "-" : schedule.getAuds().get(audId.toString()));
 
             if (ref.groupFlag) {
                 response.append("/");

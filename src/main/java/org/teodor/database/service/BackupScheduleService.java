@@ -10,6 +10,8 @@ import org.teodor.database.dto.BackupScheduleDTO;
 import org.teodor.pojo.ScheduleDto;
 import org.teodor.util.WebPageParser;
 
+import static org.teodor.util.MapperHelper.getKeyByValue;
+
 @Log4j2
 public class BackupScheduleService {
 
@@ -21,14 +23,7 @@ public class BackupScheduleService {
 
     public ScheduleDto updateBackupSchedule() {
 //        ScheduleDto scheduleDto = JsonParser.extractScheduleFromFile();
-        ScheduleDto scheduleDto = WebPageParser.extractJsonFromResponse();
-
-        scheduleDto.getTeachers().values()
-                .forEach(teacher -> teacher
-                        .setName(teacher.getName()
-                                .trim()
-                                .replace(". ", ".")
-                                .replace("  ", " ")));
+        ScheduleDto scheduleDto = sanitizeSchedule(WebPageParser.extractJsonFromResponse());
 
         BackupScheduleDTO oldBackupScheduleDTO = getBackup();
         if (oldBackupScheduleDTO == null) {
@@ -65,5 +60,20 @@ public class BackupScheduleService {
 
     public BackupScheduleDTO getBackup() {
         return backupScheduleDAO.find();
+    }
+
+    private ScheduleDto sanitizeSchedule(ScheduleDto scheduleDto){
+        scheduleDto.getTeachers().values()
+                .forEach(teacher -> teacher
+                        .setName(teacher.getName()
+                                .trim()
+                                .replace(". ", ".")
+                                .replace("  ", " ")));
+
+        String firstKey = getKeyByValue(scheduleDto.getPredms(), "Досліджую історію та суспільство");
+        String secondKey = getKeyByValue(scheduleDto.getPredms(), "ІК \"Здоров’я, безпека та добробут\"");
+        scheduleDto.getPredms().put(firstKey, "Досліджую іст. та сусп.");
+        scheduleDto.getPredms().put(secondKey, "Здоров’я, безпека та добробут");
+        return scheduleDto;
     }
 }
