@@ -13,20 +13,35 @@ java {
 }
 
 tasks.processResources {
+    val botToken = project.findProperty("BOT_TOKEN") as String?
+    val adminChatId = project.findProperty("ADMIN_CHAT_ID") as String?
+    val dbName = project.findProperty("DB_NAME") as String?
+    val dbUsername = project.findProperty("DB_USERNAME") as String?
+    val dbPassword = project.findProperty("DB_PASSWORD") as String?
+
     inputs.properties(
         mapOf(
-            "botToken" to (project.findProperty("bot.token") ?: "")
+            "BOT_TOKEN" to (botToken ?: ""),
+            "ADMIN_CHAT_ID" to (adminChatId ?: ""),
+            "DB_NAME" to (dbName ?: ""),
+            "DB_USERNAME" to (dbUsername ?: ""),
+            "DB_PASSWORD" to (dbPassword ?: "")
         )
     )
 
-    filesMatching("bot.properties") {
+    filesMatching("**/*.properties") {
         expand(
             mapOf(
-                "botToken" to (project.findProperty("bot.token") ?: "")
+                "BOT_TOKEN" to (botToken ?: ""),
+                "ADMIN_CHAT_ID" to (adminChatId ?: ""),
+                "DB_NAME" to (dbName ?: ""),
+                "DB_USERNAME" to (dbUsername ?: ""),
+                "DB_PASSWORD" to (dbPassword ?: "")
             )
         )
     }
 }
+
 
 application {
     mainClass.set("org.teodor.Application")

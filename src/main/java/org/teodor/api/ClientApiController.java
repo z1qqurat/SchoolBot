@@ -1,4 +1,4 @@
-package org.teodor.api.client;
+package org.teodor.api;
 
 import io.restassured.RestAssured;
 import org.teodor.config.ConfigManager;

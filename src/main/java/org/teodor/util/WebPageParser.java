@@ -6,7 +6,7 @@ import lombok.experimental.UtilityClass;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.teodor.api.client.ClientApiController;
+import org.teodor.api.ClientApiController;
 import org.teodor.config.ConfigManager;
 import org.teodor.pojo.ScheduleDto;
 
@@ -48,23 +48,6 @@ public class WebPageParser {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    @SneakyThrows
-    public static String parseSchedule() {
-        Document document = Jsoup.connect(ConfigManager.getConfig().getClientApiUrl()).get();
-
-
-//
-//        Element headerDiv = document.selectFirst("div.profile_in_game_header");
-//        String headerText = headerDiv != null ? headerDiv.text() : "";
-//
-//        Element nameDiv = document.selectFirst("div.profile_in_game_name");
-//        String nameText = nameDiv != null ? nameDiv.text() : "";
-//
-//        return Map.of("status", headerText, "game", nameText);
-
-        return document.selectXpath("//title").getFirst().text();
     }
 
 }

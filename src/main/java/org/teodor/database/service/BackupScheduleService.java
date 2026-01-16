@@ -10,6 +10,9 @@ import org.teodor.database.dto.BackupScheduleDTO;
 import org.teodor.pojo.ScheduleDto;
 import org.teodor.util.WebPageParser;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+
 import static org.teodor.util.MapperHelper.getKeyByValue;
 
 @Log4j2
@@ -26,12 +29,12 @@ public class BackupScheduleService {
         ScheduleDto scheduleDto = sanitizeSchedule(WebPageParser.extractJsonFromResponse());
 
         BackupScheduleDTO oldBackupScheduleDTO = getBackup();
+        BackupScheduleDTO newBackupScheduleDTO = new BackupScheduleDTO()
+                .setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
         if (oldBackupScheduleDTO == null) {
             ObjectMapper mapper = new ObjectMapper();
-            BackupScheduleDTO newBackupScheduleDTO = null;
             try {
-                newBackupScheduleDTO = new BackupScheduleDTO()
-                        .setRawSchedule(mapper.writeValueAsString(scheduleDto))
+                newBackupScheduleDTO.setRawSchedule(mapper.writeValueAsString(scheduleDto))
                         .setHashcode(scheduleDto.hashCode());
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
@@ -42,10 +45,8 @@ public class BackupScheduleService {
         }
         if (scheduleDto.hashCode() != oldBackupScheduleDTO.getHashcode()) {
             ObjectMapper mapper = new ObjectMapper();
-            BackupScheduleDTO newBackupScheduleDTO = null;
             try {
-                newBackupScheduleDTO = new BackupScheduleDTO()
-                        .setRawSchedule(mapper.writeValueAsString(scheduleDto))
+                newBackupScheduleDTO.setRawSchedule(mapper.writeValueAsString(scheduleDto))
                         .setHashcode(scheduleDto.hashCode());
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);

@@ -29,7 +29,7 @@ public class BackupScheduleDAOImpl implements BackupScheduleDAO {
 
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
-                return new BackupScheduleDTO(rs.getString("raw_schedule"), rs.getInt("hashcode"));
+                return new BackupScheduleDTO(rs.getString("raw_schedule"), rs.getInt("hashcode"), rs.getTimestamp("updated_at"));
             }
             return null;
 
@@ -40,12 +40,13 @@ public class BackupScheduleDAOImpl implements BackupScheduleDAO {
 
     @Override
     public void update(BackupScheduleDTO schedule) {
-        String sql = "UPDATE backup_schedule SET raw_schedule = ?, hashcode = ?";
+        String sql = "UPDATE backup_schedule SET raw_schedule = ?, hashcode = ?, updated_at = ?";
         log.info(LOG_MESSAGE, sql);
         try (Connection c = dataSource.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, schedule.getRawSchedule());
             ps.setInt(2, schedule.getHashcode());
+            ps.setTimestamp(3, schedule.getUpdatedAt());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException("update backup schedule failed: ", e);
@@ -54,12 +55,13 @@ public class BackupScheduleDAOImpl implements BackupScheduleDAO {
 
     @Override
     public void create(BackupScheduleDTO schedule) {
-        String sql = "INSERT INTO backup_schedule (raw_schedule, hashcode) VALUES (?, ?)";
+        String sql = "INSERT INTO backup_schedule (raw_schedule, hashcode, updated_at) VALUES (?, ?, ?)";
         log.info(LOG_MESSAGE, sql);
         try (Connection c = dataSource.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, schedule.getRawSchedule());
             ps.setInt(2, schedule.getHashcode());
+            ps.setTimestamp(3, schedule.getUpdatedAt());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException("add new backup schedule failed: ", e);

@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
+import java.sql.Timestamp;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -18,4 +20,7 @@ public class BackupScheduleDTO {
     @JsonProperty("raw_schedule")
     private String rawSchedule;
     private int hashcode;
+
+    @JsonProperty("updated_at")
+    private Timestamp updatedAt;
 }
