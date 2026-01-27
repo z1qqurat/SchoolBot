@@ -8,7 +8,7 @@ import static org.teodor.util.DateUtils.convertEpochToDate;
 
 @Log4j2
 @UtilityClass
-public class Logger {
+public class LogUtil {
 
         private static final String LOG_OUTPUT = """
             -----------------------------------

@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static org.teodor.util.MapperHelper.getDayFromDayIndex;
+import static org.teodor.util.StringUtil.wrapInCodeBlock;
 
 @UtilityClass
 public class ScheduleHelper {
@@ -24,12 +25,10 @@ public class ScheduleHelper {
         }
 
         StringBuilder response = new StringBuilder();
-        response.append("%s```Розклад\n".formatted(teacher.getName()));
         teacher.getRoz().forEach((k, v) -> {
             response.append(getTeacherFormattedScheduleForDay(schedule, k, v));
         });
-        response.append("```");
-        return response.toString();
+        return teacher.getName() + wrapInCodeBlock(response, "Розклад");
     }
 
     public static StringBuilder getTeacherFormattedScheduleForDay(ScheduleDto schedule, String dayNumb, Map<String, List<TeacherLessonDto>> daySchedule) {
@@ -38,23 +37,9 @@ public class ScheduleHelper {
                 .append(":\n");
         daySchedule.forEach((lessonNumb, lessons) ->
         {
-//            String row = "%s - %-4s | %s\n";
             String row = "%s | %-8s | %s\n";
             if (!lessons.isEmpty()) {
-//                response.append(lessonNumb).append(" - ")
-//                        .append(lessons.getFirst().getCs())
-//                        .append(" | ")
-//                        .append(schedule.getAuds().get(lessons.getFirst().getA().toString()));
-//                response.append("\n");
-
-
-//                response.append(row.formatted(lessonNumb, lessons.getFirst().getCs(), schedule.getAuds().get(lessons.getFirst().getA().toString())));
                 response.append(row.formatted(lessonNumb, schedule.getAuds().get(lessons.getFirst().getA().toString()), lessons.getFirst().getCs()));
-
-
-                //                response.append(lessonNumb).append(" - ");
-//                lessons.forEach(lesson -> response.append(row.formatted(schedule.getPredms().get(lesson.getP().toString()),
-//                        getAuditInfo(schedule, lesson))));
             }
 
         });
@@ -73,13 +58,11 @@ public class ScheduleHelper {
         }
 
         StringBuilder response = new StringBuilder();
-        response.append("```%s\n".formatted(grade.getName()));
         grade.getRoz().forEach((dayNumb, daySchedule) -> {
             response.append(getGradeFormattedScheduleForDay(schedule, dayNumb, daySchedule));
             response.append("\n\n");
         });
-        response.append("```");
-        return response.toString();
+        return wrapInCodeBlock(response, grade.getName()).toString();
     }
 
     public static StringBuilder getGradeFormattedScheduleForDay(ScheduleDto schedule, String dayNumb, Map<String, List<LessonDto>> daySchedule) {
@@ -88,24 +71,13 @@ public class ScheduleHelper {
                 .append(":\n");
         daySchedule.forEach((lessonNumb, lessons) ->
         {
-//            String singleRow = "%-29s | %s\n";
-//            String doubleRow = "%-29s (гр.2) | %s\n" + "    %-29s (гр.2) | %s\n";
             String singleRow = "%-8s | %s\n";
             String doubleRow = "%-8s | %s (гр.1)\n" + "    %-8s | %s (гр.2)\n";
             if (!lessons.isEmpty()) {
                 response.append(lessonNumb).append(" | ");
-//                lessons.forEach(lesson -> response.append(schedule.getPredms().get(lesson.getP().toString()))
-//                        .append(" | ")
-//                        .append(getAuditInfo(schedule, lesson))
-//                        .append("\n"));
                 if (lessons.size() == 1) {
-//                    lessons.forEach(lesson -> response.append(singleRow.formatted(schedule.getPredms().get(lesson.getP().toString()),
-//                            getAuditInfo(schedule, lesson))));
                     lessons.forEach(lesson -> response.append(singleRow.formatted(getAuditInfo(schedule, lesson), schedule.getPredms().get(lesson.getP().toString()))));
                 } else {
-//                    response.append(doubleRow.formatted(schedule.getPredms().get(lessons.get(0).getP().toString()),
-//                            getAuditInfo(schedule, lessons.get(0)),schedule.getPredms().get(lessons.get(1).getP().toString()),
-//                            getAuditInfo(schedule, lessons.get(1))));
                     response.append(doubleRow.formatted(getAuditInfo(schedule, lessons.get(0)), schedule.getPredms().get(lessons.get(0).getP().toString()),
                             getAuditInfo(schedule, lessons.get(1)), schedule.getPredms().get(lessons.get(1).getP().toString())));
                 }
@@ -149,36 +121,19 @@ public class ScheduleHelper {
         });
         return response;
     }
+
+    public static String getBellsSchedule() {
+
+        String SCHEDULE = """
+                1 |  8:30 -  9:15
+                2 |  9:25 - 10:10
+                3 | 10:25 - 11:10
+                4 | 11:25 - 12:10
+                5 | 12:25 - 13:10
+                6 | 13:20 - 14:05
+                7 | 14:15 - 15:00
+                8 | 15:05 - 15:50
+                """;
+        return wrapInCodeBlock(SCHEDULE, "Дзвінки").toString();
+    }
 }
-
-
-// class urok dto
-//{
-//        "sid":20076035, -- під уроку
-//        "pn":0,
-//        "p":325, - предмет
-//        "um":"0",
-//        "g":0,
-//        "nums":[
-//        {
-//        "g":0, - група
-//        "t":32733, - вчитель
-//        "a":0 - аудиторія
-//        }
-//        ]
-//}
-
-//teacher urok dto
-
-//{
-//        "sid": 19907983, -- під уроку
-//        "pn": 0,
-//        "cc": [   -- під класу
-//        135909
-//        ],
-//        "c_s": "11-Г", - назва класу
-//        "um": "0",
-//        "p": 4, - предмет
-//        "g": 0, - група
-//        "a": 9868 - аудиторія
-//        }
