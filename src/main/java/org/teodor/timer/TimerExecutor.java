@@ -3,10 +3,13 @@ package org.teodor.timer;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.teodor.util.DateUtils;
 
 import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Calendar;
+import java.util.TimeZone;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -47,25 +50,26 @@ public class TimerExecutor {
         executorService.scheduleAtFixedRate(taskWrapper, initialDelay, period, TimeUnit.MILLISECONDS);
     }
 
-//    private long calculateInitialDelay(int targetHour, int targetMin) {
-//        Calendar nextNotification = Calendar.getInstance(TimeZone.getTimeZone(ZoneId.of("Europe/Kyiv")));
-//        nextNotification.set(Calendar.HOUR_OF_DAY, targetHour);
-//        nextNotification.set(Calendar.MINUTE, targetMin);
-//        nextNotification.set(Calendar.SECOND, 0);
-//        nextNotification.set(Calendar.MILLISECOND, 0);
-//
-//        Calendar now = Calendar.getInstance(TimeZone.getTimeZone(ZoneId.of("Europe/Kyiv")));
-//        String dayOfWeek = DateUtils.getDayOfWeek();
-//        if (dayOfWeek.equals("6") || dayOfWeek.equals("7")) {
-//            int daysToAdd = (8 - now.get(Calendar.DAY_OF_WEEK)) % 7;
-//            nextNotification.add(Calendar.DATE, daysToAdd);
-//        } else if (now.after(nextNotification)) {
-//            nextNotification.add(Calendar.DATE, 1);
-//        }
-//
-//        long initialDelay = nextNotification.getTimeInMillis() - now.getTimeInMillis();
-//        return initialDelay;
-//    }
+    // refactor later
+    private long calculateInitialDelay(int targetHour, int targetMin) {
+        Calendar nextNotification = Calendar.getInstance(TimeZone.getTimeZone(ZoneId.of("Europe/Kyiv")));
+        nextNotification.set(Calendar.HOUR_OF_DAY, targetHour);
+        nextNotification.set(Calendar.MINUTE, targetMin);
+        nextNotification.set(Calendar.SECOND, 0);
+        nextNotification.set(Calendar.MILLISECOND, 0);
+
+        Calendar now = Calendar.getInstance(TimeZone.getTimeZone(ZoneId.of("Europe/Kyiv")));
+        String dayOfWeek = DateUtils.getDayOfWeek();
+        if (dayOfWeek.equals("6") || dayOfWeek.equals("7")) {
+            int daysToAdd = (8 - now.get(Calendar.DAY_OF_WEEK)) % 7;
+            nextNotification.add(Calendar.DATE, daysToAdd);
+        } else if (now.after(nextNotification)) {
+            nextNotification.add(Calendar.DATE, 1);
+        }
+
+        long initialDelay = nextNotification.getTimeInMillis() - now.getTimeInMillis();
+        return initialDelay;
+    }
 
     private long calculateNextWeekdayDelay(int hour, int minute) {
         ZoneId zone = ZoneId.of("Europe/Kyiv");

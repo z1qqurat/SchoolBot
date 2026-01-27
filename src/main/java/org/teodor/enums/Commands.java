@@ -14,6 +14,7 @@ public enum Commands {
     TEACHER("/teacher", "Select a teacher to get schedule"),
     GRADE("/grade", "Select a grade to get schedule"),
     TRACK("/track", "Select a grade/teacher to track"),
+    BELL("/bell", "Send a school bells schedule"),
     HELP("/help", "Send all bot commands and info"),
     TEST("/test", "test");
 

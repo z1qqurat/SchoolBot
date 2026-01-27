@@ -35,6 +35,7 @@ import static org.teodor.util.BotMessageBuilder.buildKeyboardButton;
 import static org.teodor.util.BotMessageBuilder.buildSendMessage;
 import static org.teodor.util.DateUtils.getDayOfWeek;
 import static org.teodor.util.MapperHelper.convertEngCharsIntoUkr;
+import static org.teodor.util.ScheduleHelper.getBellsSchedule;
 import static org.teodor.util.ScheduleHelper.getFormattedScheduleForGrade;
 import static org.teodor.util.ScheduleHelper.getFormattedScheduleForTeacher;
 import static org.teodor.util.ScheduleHelper.getGradeFormattedScheduleForDay;
@@ -171,14 +172,6 @@ public class BotResponseHandler {
             teachers.forEach(entry ->
                     rows.add(new InlineKeyboardRow(buildKeyboardButton(entry.getValue().getName(), "see_teacher_key_" + entry.getKey()))));
             sendMessage(buildSendMessage(update.getMessage().getChatId(), "Ось список можливих вчителів:", InlineKeyboardMarkup.builder().keyboard(rows).build()));
-
-//            AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery("id");
-//            answerCallbackQuery.setShowAlert(true);
-//            try {
-//                telegramClient.execute(answerCallbackQuery);
-//            } catch (TelegramApiException e) {
-//                throw new RuntimeException(e);
-//            }
         } else {
             sendMessage(buildSendMessage(update.getMessage().getChatId(), getFormattedScheduleForTeacher(schedule, teacherId)));
         }
@@ -218,6 +211,11 @@ public class BotResponseHandler {
                 .keyboard(List.of(new InlineKeyboardRow(buildKeyboardButton("Вчитель", "track_teacher")),
                         new InlineKeyboardRow(buildKeyboardButton("Клас", "track_grade")))).build();
         sendMessage(buildSendMessage(update.getMessage().getChatId(), "Обери тип розкладу для відстеження:", inlineKeyboardMarkup));
+    }
+
+    @BotCommand(command = "/bell")
+    public void bellCommand(Update update) {
+        sendMessage(buildSendMessage(update.getMessage().getChatId(), getBellsSchedule()));
     }
 
     @BotCommand(command = "/help")
