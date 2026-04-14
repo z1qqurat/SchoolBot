@@ -122,9 +122,28 @@ public class ScheduleHelper {
         return response;
     }
 
-    public static String getBellsSchedule() {
-
-        String SCHEDULE = """
+    public static String getBellsSchedule(String lessonDuration) {
+        String SCHEDULE_20 = """
+                1 |  8:30 -  8:50
+                2 |  8:55 -  9:15
+                3 |  9:25 -  9:45
+                4 | 10:00 - 10:20
+                5 | 10:30 - 10:50
+                6 | 10:55 - 11:15
+                7 | 11:25 - 11:45
+                8 | 11:50 - 12:10
+                """;
+        String SCHEDULE_30 = """
+                1 |  8:30 -  9:00
+                2 |  9:05 -  9:35
+                3 |  9:45 - 10:15
+                4 | 10:25 - 10:55
+                5 | 11:05 - 11:35
+                6 | 11:40 - 12:10
+                7 | 12:20 - 12:50
+                8 | 12:55 - 13:25
+                """;
+        String SCHEDULE_45 = """
                 1 |  8:30 -  9:15
                 2 |  9:25 - 10:10
                 3 | 10:25 - 11:10
@@ -134,6 +153,19 @@ public class ScheduleHelper {
                 7 | 14:15 - 15:00
                 8 | 15:05 - 15:50
                 """;
-        return wrapInCodeBlock(SCHEDULE, "Дзвінки").toString();
+        switch (lessonDuration) {
+            case "20" -> {
+                return wrapInCodeBlock(SCHEDULE_20, "Дзвінки").toString();
+            }
+            case "30" -> {
+                return wrapInCodeBlock(SCHEDULE_30, "Дзвінки").toString();
+            }
+            case "45" -> {
+                return wrapInCodeBlock(SCHEDULE_45, "Дзвінки").toString();
+            }
+            default -> {
+                return "Помилка, неправильна тривалість уроку";
+            }
+        }
     }
 }
