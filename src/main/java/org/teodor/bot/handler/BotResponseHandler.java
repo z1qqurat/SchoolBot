@@ -29,7 +29,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import static org.teodor.enums.Commands.BELL;
+import static org.teodor.enums.Commands.GRADE;
 import static org.teodor.util.BotMessageBuilder.buildEditMessage;
 import static org.teodor.util.BotMessageBuilder.buildKeyboardButton;
 import static org.teodor.util.BotMessageBuilder.buildSendMessage;
@@ -180,7 +184,7 @@ public class BotResponseHandler {
 
     @BotCommand(command = "/grade")
     public void gradeCommand(Update update) {
-        if (update.getMessage().getText().equals("/grade")) {
+        if (update.getMessage().getText().equals(GRADE.getText())) {
             sendMessage(buildSendMessage(update.getMessage().getChatId(),
                     "Будь ласка, введіть частину/повну назву класу через пробіл після команди /grade"));
             return;
@@ -215,7 +219,15 @@ public class BotResponseHandler {
 
     @BotCommand(command = "/bell")
     public void bellCommand(Update update) {
-        sendMessage(buildSendMessage(update.getMessage().getChatId(), getBellsSchedule()));
+        Pattern pattern = Pattern.compile(BELL.getText() + " (20|30|45)");
+        Matcher matcher = pattern.matcher(update.getMessage().getText());
+        if (!matcher.find()) {
+            sendMessage(buildSendMessage(update.getMessage().getChatId(),
+                    "Неправильна команда.\nПриклад: /bell 45\nДоступні опції: 20, 30, 45"));
+            return;
+        }
+        sendMessage(buildSendMessage(update.getMessage().getChatId(),
+                getBellsSchedule(update.getMessage().getText().split(" ")[1])));
     }
 
     @BotCommand(command = "/help")
