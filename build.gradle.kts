@@ -1,16 +1,18 @@
 plugins {
+    java
     id("java")
     id("application")
 }
 
 group = "org.teodor"
 version = "1.0.0"
+java.sourceCompatibility = JavaVersion.VERSION_21
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
-    }
-}
+//java {
+//    toolchain {
+//        languageVersion.set(JavaLanguageVersion.of(21))
+//    }
+//}
 
 tasks.processResources {
     val botToken = project.findProperty("BOT_TOKEN") as String?
@@ -86,8 +88,6 @@ dependencies {
     implementation("org.telegram:telegrambots-client:9.2.0")
     implementation("com.vdurmont:emoji-java:5.1.1")
 
-//    implementation("org.slf4j:slf4j-api:1.7.25")
-//    implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.24.3")
     implementation("org.slf4j:slf4j-api:2.0.9")
     implementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.24.3")
     implementation("org.apache.logging.log4j:log4j-core:2.24.3")
@@ -104,4 +104,22 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.register<Copy>("stage") {
+    dependsOn("clean", "build")
+
+    from(tasks.jar.get().archiveFile)
+    into(project.rootDir)
+    rename { "app.jar" }
+}
+
+tasks.named("stage") {
+    mustRunAfter("clean")
+}
+
+tasks.clean {
+    doLast {
+        project.file("app.jar").delete()
+    }
 }
