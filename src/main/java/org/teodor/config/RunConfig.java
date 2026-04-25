@@ -16,13 +16,31 @@ public class RunConfig {
     private final String dbPassword;
 
     public RunConfig(PropertyReader propertyReader) {
-        botToken = propertyReader.getProperty("bot.token");
+        botToken = resolve(propertyReader.getProperty("bot.token"));
         clientApiUrl = propertyReader.getProperty("client.api.url");
+        adminChatId = Long.parseLong(resolve(propertyReader.getProperty("admin.chat.id")));
+        dbName = resolve(propertyReader.getProperty("db.name"));
+        dbUsername = resolve(propertyReader.getProperty("db.username"));
+        dbPassword = resolve(propertyReader.getProperty("db.password"));
+    }
 
-        adminChatId = Long.parseLong(propertyReader.getProperty("admin.chat.id"));
+    private String resolve(String value) {
+        if (value == null || value.isEmpty()) return "";
 
-        dbName = propertyReader.getProperty("db.name");
-        dbUsername = propertyReader.getProperty("db.username");
-        dbPassword = propertyReader.getProperty("db.password");
+        // 2. If it's a placeholder like ${BOT_TOKEN}
+        if (value.startsWith("${")) {
+            String key = value.substring(2, value.length() - 1);
+
+            // Look in System Properties (-D) first
+            String sysProp = System.getProperty(key);
+            if (sysProp != null) return sysProp;
+
+            // Then look in Environment Variables (Heroku)
+            String envVar = System.getenv(key);
+            if (envVar != null) return envVar;
+
+            return "";
+        }
+        return value;
     }
 }

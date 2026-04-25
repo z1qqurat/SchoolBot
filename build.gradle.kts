@@ -9,42 +9,8 @@ group = "org.teodor"
 version = "1.0.0"
 java.sourceCompatibility = JavaVersion.VERSION_21
 
-//java {
-//    toolchain {
-//        languageVersion.set(JavaLanguageVersion.of(21))
-//    }
-//}
-
 tasks.processResources {
-    val botToken = project.findProperty("BOT_TOKEN") as String?
-    val adminChatId = project.findProperty("ADMIN_CHAT_ID") as String?
-    val dbName = project.findProperty("DB_NAME") as String?
-    val dbUsername = project.findProperty("DB_USERNAME") as String?
-    val dbPassword = project.findProperty("DB_PASSWORD") as String?
-
-    inputs.properties(
-        mapOf(
-            "BOT_TOKEN" to (botToken ?: ""),
-            "ADMIN_CHAT_ID" to (adminChatId ?: ""),
-            "DB_NAME" to (dbName ?: ""),
-            "DB_USERNAME" to (dbUsername ?: ""),
-            "DB_PASSWORD" to (dbPassword ?: "")
-        )
-    )
-
-    filesMatching("**/*.properties") {
-        expand(
-            mapOf(
-                "BOT_TOKEN" to (botToken ?: ""),
-                "ADMIN_CHAT_ID" to (adminChatId ?: ""),
-                "DB_NAME" to (dbName ?: ""),
-                "DB_USERNAME" to (dbUsername ?: ""),
-                "DB_PASSWORD" to (dbPassword ?: "")
-            )
-        )
-    }
 }
-
 
 application {
     mainClass.set("org.teodor.Application")
@@ -67,6 +33,18 @@ tasks.build {
 
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
+
+    val botToken = project.findProperty("BOT_TOKEN") as String?
+    val adminId = project.findProperty("ADMIN_CHAT_ID") as String?
+    val dbName = project.findProperty("DB_NAME") as String?
+    val dbUser = project.findProperty("DB_USERNAME") as String?
+    val dbPass = project.findProperty("DB_PASSWORD") as String?
+
+    if (botToken != null) systemProperty("BOT_TOKEN", botToken)
+    if (adminId != null) systemProperty("ADMIN_CHAT_ID", adminId)
+    if (dbName != null) systemProperty("DB_NAME", dbName)
+    if (dbUser != null) systemProperty("DB_USERNAME", dbUser)
+    if (dbPass != null) systemProperty("DB_PASSWORD", dbPass)
 }
 
 repositories {
@@ -106,14 +84,6 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
-
-//tasks.register<Copy>("stage") {
-//    dependsOn("clean", "shadowJar")
-//
-//    from(tasks.named("shadowJar"))
-//    into(project.rootDir)
-//    rename { "app.jar" }
-//}
 
 tasks.register("stage") {
     dependsOn("clean", "shadowJar")
