@@ -2,6 +2,7 @@ plugins {
     java
     id("java")
     id("application")
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 group = "org.teodor"
@@ -106,12 +107,24 @@ tasks.test {
     useJUnitPlatform()
 }
 
-tasks.register<Copy>("stage") {
-    dependsOn("clean", "build")
+//tasks.register<Copy>("stage") {
+//    dependsOn("clean", "shadowJar")
+//
+//    from(tasks.named("shadowJar"))
+//    into(project.rootDir)
+//    rename { "app.jar" }
+//}
 
-    from(tasks.jar.get().archiveFile)
-    into(project.rootDir)
-    rename { "app.jar" }
+tasks.register("stage") {
+    dependsOn("clean", "shadowJar")
+
+    doLast {
+        val shadowJarFile = tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar").get().archiveFile.get().asFile
+        val destination = file("${project.rootDir}/app.jar")
+
+        shadowJarFile.copyTo(destination, overwrite = true)
+        println("Copied ${shadowJarFile.name} to ${destination.absolutePath}")
+    }
 }
 
 tasks.named("stage") {
@@ -120,6 +133,9 @@ tasks.named("stage") {
 
 tasks.clean {
     doLast {
-        project.file("app.jar").delete()
+        val file = project.file("app.jar")
+        if (file.exists()) {
+            file.delete()
+        }
     }
 }
