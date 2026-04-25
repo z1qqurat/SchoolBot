@@ -18,8 +18,10 @@ import org.teodor.database.service.BackupScheduleService;
 import org.teodor.database.service.UserService;
 import org.teodor.pojo.ScheduleDto;
 import org.teodor.pojo.classes.ClassDetailsDto;
+import org.teodor.pojo.classes.LessonDto;
 import org.teodor.pojo.classes.RozDto;
 import org.teodor.pojo.teacher.TeacherDetailsDto;
+import org.teodor.pojo.teacher.TeacherLessonDto;
 import org.teodor.pojo.teacher.TeacherRozDto;
 import org.teodor.timer.CustomTimerTask;
 import org.teodor.timer.TimerExecutor;
@@ -131,17 +133,27 @@ public class BotResponseHandler {
     }
 
     private void sendTodaySchedule(UserDTO user) {
+        String dayOfWeek = getDayOfWeek();
         if (user.isTeacher()) {
-            TeacherRozDto teacherSchedule = schedule.getTeachers().get(user.getTrackingId()).getRoz();
-            String scheduleForToday = getTeacherFormattedScheduleForDay(schedule, getDayOfWeek(), teacherSchedule.get(getDayOfWeek())).toString();
+            Map<String, List<TeacherLessonDto>> teacherDaySchedule = schedule.getTeachers().get(user.getTrackingId()).getRoz().get(dayOfWeek);
+            if (Objects.isNull(teacherDaySchedule)) {
+                sendMessage(buildSendMessage(user.getId(), "Сьогодні занять немає."));
+                return;
+            }
+            String scheduleForToday = getTeacherFormattedScheduleForDay(schedule, dayOfWeek, teacherDaySchedule).toString();
             if (!scheduleForToday.contains("-")) {
                 sendMessage(buildSendMessage(user.getId(), "Сьогодні занять немає."));
             } else {
                 sendMessage(buildSendMessage(user.getId(), "*Розклад на сьогодні*\n\n" + scheduleForToday));
             }
         } else {
-            RozDto gradeSchedule = schedule.getClasses().get(user.getTrackingId()).getRoz();
-            String scheduleForToday = getGradeFormattedScheduleForDay(schedule, getDayOfWeek(), gradeSchedule.get(getDayOfWeek())).toString();
+            Map<String, List<LessonDto>> gradeDaySchedule = schedule.getClasses().get(user.getTrackingId()).getRoz().get(dayOfWeek);
+            if (Objects.isNull(gradeDaySchedule)) {
+                sendMessage(buildSendMessage(user.getId(), "Сьогодні занять немає."));
+                return;
+            }
+
+            String scheduleForToday = getGradeFormattedScheduleForDay(schedule, dayOfWeek, gradeDaySchedule).toString();
             sendMessage(buildSendMessage(user.getId(), "*Розклад на сьогодні*\n\n" + scheduleForToday));
         }
     }
