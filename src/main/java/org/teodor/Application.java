@@ -23,7 +23,7 @@ public class Application {
 
         int port = Integer.parseInt(Optional.ofNullable(System.getenv("PORT")).orElse("5050"));
 
-        HttpServer server = null;
+        HttpServer server;
         try {
             server = HttpServer.create(new InetSocketAddress(port), 0);
         } catch (IOException e) {
@@ -40,37 +40,29 @@ public class Application {
 
         try (TelegramBotsLongPollingApplication botsApplication =
                      new TelegramBotsLongPollingApplication()) {
-
             skipOldUpdates();
-
             botsApplication.registerBot(
                     BOT_TOKEN,
                     new SchoolScheduleBot(BOT_TOKEN)
             );
-
             log.info("SchoolBot started — old updates ignored");
             Thread.currentThread().join();
-
         } catch (Exception e) {
             log.error("Bot startup error", e);
         }
-
     }
 
     private static void skipOldUpdates() throws Exception {
         TelegramClient client = new OkHttpTelegramClient(BOT_TOKEN);
-
         GetUpdates getUpdates = GetUpdates.builder()
                 .limit(100)
                 .build();
-
         List<Update> updates;
         int lastUpdateId = 0;
-
         do {
             updates = client.execute(getUpdates);
             if (!updates.isEmpty()) {
-                lastUpdateId = updates.get(updates.size() - 1).getUpdateId() + 1;
+                lastUpdateId = updates.getLast().getUpdateId() + 1;
                 getUpdates.setOffset(lastUpdateId);
             }
         } while (!updates.isEmpty());

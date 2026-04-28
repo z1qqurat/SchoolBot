@@ -26,7 +26,6 @@ import org.teodor.timer.TimerExecutor;
 import org.teodor.util.StringUtil;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -44,6 +43,7 @@ import static org.teodor.util.ScheduleHelper.getBellsSchedule;
 import static org.teodor.util.ScheduleHelper.getFormattedScheduleForGrade;
 import static org.teodor.util.ScheduleHelper.getFormattedScheduleForTeacher;
 import static org.teodor.util.ScheduleHelper.getGradeFormattedScheduleForDay;
+import static org.teodor.util.ScheduleHelper.getHelp;
 import static org.teodor.util.ScheduleHelper.getTeacherFormattedScheduleForDay;
 
 @Log4j2
@@ -242,7 +242,7 @@ public class BotResponseHandler {
 
     @BotCommand(command = "/help")
     public void helpCommand(Update update) {
-        sendMessage(buildSendMessage(update.getMessage().getChatId(), "placeholder for help"));
+        sendMessage(buildSendMessage(update.getMessage().getChatId(), getHelp()));
     }
 
     @BotCommand(command = "/test")
