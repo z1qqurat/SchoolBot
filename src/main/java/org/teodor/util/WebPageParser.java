@@ -1,13 +1,11 @@
 package org.teodor.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.teodor.api.ClientApiController;
-import org.teodor.config.ConfigManager;
 import org.teodor.pojo.ScheduleDto;
 
 import java.util.regex.Matcher;
