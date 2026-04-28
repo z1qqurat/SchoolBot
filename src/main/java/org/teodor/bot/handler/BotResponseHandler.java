@@ -19,12 +19,11 @@ import org.teodor.database.service.UserService;
 import org.teodor.pojo.ScheduleDto;
 import org.teodor.pojo.classes.ClassDetailsDto;
 import org.teodor.pojo.classes.LessonDto;
-import org.teodor.pojo.classes.RozDto;
 import org.teodor.pojo.teacher.TeacherDetailsDto;
 import org.teodor.pojo.teacher.TeacherLessonDto;
-import org.teodor.pojo.teacher.TeacherRozDto;
 import org.teodor.timer.CustomTimerTask;
 import org.teodor.timer.TimerExecutor;
+import org.teodor.util.StringUtil;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -62,7 +61,6 @@ public class BotResponseHandler {
         startScheduledTimer();
         this.telegramClient = telegramClient;
         schedule = backupScheduleService.updateBackupSchedule();
-        LinkedHashMap<String, String> map = new LinkedHashMap<>();
         callbackQueryHandler = new CallbackQueryHandler(schedule);
     }
 
@@ -71,7 +69,7 @@ public class BotResponseHandler {
         if (update.getMessage().getChatId().equals(ConfigManager.getConfig().getAdminChatId())) {
             schedule = backupScheduleService.updateBackupSchedule();
             callbackQueryHandler = new CallbackQueryHandler(schedule);
-            sendMessage(buildSendMessage(update.getMessage().getChatId(), "Розклад було успішно оновлено вручну"));
+            sendMessage(buildSendMessage(ConfigManager.getConfig().getAdminChatId(), "Розклад було успішно оновлено вручну"));
         }
     }
 
@@ -140,7 +138,7 @@ public class BotResponseHandler {
                 sendMessage(buildSendMessage(user.getId(), "Сьогодні занять немає."));
                 return;
             }
-            String scheduleForToday = getTeacherFormattedScheduleForDay(schedule, dayOfWeek, teacherDaySchedule).toString();
+            String scheduleForToday = StringUtil.wrapInCodeBlock(getTeacherFormattedScheduleForDay(schedule, dayOfWeek, teacherDaySchedule).toString()).toString();
             if (!scheduleForToday.contains("-")) {
                 sendMessage(buildSendMessage(user.getId(), "Сьогодні занять немає."));
             } else {
@@ -153,7 +151,7 @@ public class BotResponseHandler {
                 return;
             }
 
-            String scheduleForToday = getGradeFormattedScheduleForDay(schedule, dayOfWeek, gradeDaySchedule).toString();
+            String scheduleForToday = StringUtil.wrapInCodeBlock(getGradeFormattedScheduleForDay(schedule, dayOfWeek, gradeDaySchedule).toString()).toString();
             sendMessage(buildSendMessage(user.getId(), "*Розклад на сьогодні*\n\n" + scheduleForToday));
         }
     }
