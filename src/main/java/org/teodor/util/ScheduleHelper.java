@@ -21,7 +21,7 @@ public class ScheduleHelper {
     public static String getFormattedScheduleForTeacher(ScheduleDto schedule, String teacherId) {
         TeacherDetailsDto teacher = schedule.getTeachers().get(teacherId);
         if (Objects.isNull(teacher)) {
-            return "Invalid teacher name";
+            return "Неправильне ім'я вчителя";
         }
 
         StringBuilder response = new StringBuilder();
@@ -54,7 +54,7 @@ public class ScheduleHelper {
     public static String getFormattedScheduleForGrade(ScheduleDto schedule, String gradeId) {
         ClassDetailsDto grade = schedule.getClasses().get(gradeId);
         if (Objects.isNull(grade)) {
-            return "Invalid grade name";
+            return "Неправильна назва класу";
         }
 
         StringBuilder response = new StringBuilder();

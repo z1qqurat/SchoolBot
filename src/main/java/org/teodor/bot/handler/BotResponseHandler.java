@@ -160,21 +160,25 @@ public class BotResponseHandler {
     public void teacherCommand(Update update) {
         if (update.getMessage().getText().equals("/teacher")) {
             sendMessage(buildSendMessage(update.getMessage().getChatId(),
-                    "Будь ласка, введіть введіть частину/повне прізвище(мінімум 3 літери) вчителя через пробіл після команди.\nПриклад 1: /teacher Іва\nПриклад 2: /teacher Іванишин О.М."));
+                    "Введіть введіть частину(мінімум 3 літери)/повне прізвище вчителя через пробіл після команди.\nПриклад 1: /teacher Іва\nПриклад 2: /teacher Іванишин О.М."));
             return;
         }
-        String teacherName = update.getMessage().getText().replace("/teacher ", "");
+        String teacherName = update.getMessage().getText()
+                .replace("/teacher ", "")
+                .trim()
+                .replace(". ",".");
 
         if (teacherName.length() < 3) {
             sendMessage(buildSendMessage(update.getMessage().getChatId(),
-                    "Будь ласка, введіть мінімум 3 літери прізвища вчителя."));
+                    "Введіть мінімум 3 літери прізвища вчителя."));
             return;
         }
         List<Map.Entry<String, TeacherDetailsDto>> teachers = schedule.getTeachers().entrySet().stream()
                 .filter(entry -> Strings.CI.contains(entry.getValue().getName(), teacherName))
                 .toList();
         if (teachers.isEmpty()) {
-            sendMessage(buildSendMessage(update.getMessage().getChatId(), "Вибачте, вчителя з таким прізвищем не знайдено."));
+            sendMessage(buildSendMessage(update.getMessage().getChatId(), "Вчителя з таким прізвищем не знайдено."));
+            return;
         }
         String teacherId = teachers.stream()
                 .filter(entry -> entry.getValue().getName().equalsIgnoreCase(teacherName))
@@ -196,11 +200,12 @@ public class BotResponseHandler {
     public void gradeCommand(Update update) {
         if (update.getMessage().getText().equals(GRADE.getText())) {
             sendMessage(buildSendMessage(update.getMessage().getChatId(),
-                    "Будь ласка, введіть частину/повну назву класу через пробіл після команди /grade"));
+                    "Введіть частину/повну назву класу через пробіл після команди.\nПриклад 1: /grade 10\nПриклад 2: /grade 10-Б"));
             return;
         }
 
-        String gradeName = convertEngCharsIntoUkr(update.getMessage().getText().replace("/grade ", ""));
+        String gradeName = convertEngCharsIntoUkr(update.getMessage().getText().replace("/grade ", ""))
+                .replace(" ", "");
         List<Map.Entry<String, ClassDetailsDto>> grades = schedule.getClasses().entrySet().stream()
                 .filter(entry -> Strings.CI.contains(entry.getValue().getName(), gradeName))
                 .toList();
