@@ -3,15 +3,15 @@ package org.teodor.database.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.log4j.Log4j2;
+import org.teodor.api.ScheduleApiController;
 import org.teodor.database.DataSourceProvider;
 import org.teodor.database.dao.schedule.BackupScheduleDAO;
 import org.teodor.database.dao.schedule.BackupScheduleDAOImpl;
 import org.teodor.database.dto.BackupScheduleDTO;
+import org.teodor.pojo.GetScheduleResponseDto;
 import org.teodor.pojo.ScheduleDto;
-import org.teodor.util.WebPageParser;
 
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
+import java.util.Objects;
 
 import static org.teodor.util.MapperHelper.getKeyByValue;
 
@@ -25,56 +25,67 @@ public class BackupScheduleService {
     }
 
     public ScheduleDto updateBackupSchedule() {
-//        ScheduleDto scheduleDto = JsonParser.extractScheduleFromFile();
-        ScheduleDto scheduleDto = sanitizeSchedule(WebPageParser.extractJsonFromResponse());
+        ObjectMapper mapper = new ObjectMapper();
+        BackupScheduleDTO oldBackupSchedule = getBackup();
+        GetScheduleResponseDto scheduleResponse = ScheduleApiController.getSchedule(oldBackupSchedule.getETag(), oldBackupSchedule.getLastModified());
 
-        BackupScheduleDTO oldBackupScheduleDTO = getBackup();
-        BackupScheduleDTO newBackupScheduleDTO = new BackupScheduleDTO()
-                .setUpdatedAt(Timestamp.valueOf(LocalDateTime.now()));
-        if (oldBackupScheduleDTO == null) {
-            ObjectMapper mapper = new ObjectMapper();
+        if (Objects.isNull(scheduleResponse)) {
+            log.info("Schedule is up to date.");
             try {
-                newBackupScheduleDTO.setRawSchedule(mapper.writeValueAsString(scheduleDto))
-                        .setHashcode(scheduleDto.hashCode());
+                return mapper.readValue(oldBackupSchedule.getRawSchedule(), ScheduleDto.class);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
-            backupScheduleDAO.create(newBackupScheduleDTO);
-            log.info("Old backup was not found. Added a new one: {}", scheduleDto.hashCode());
-            return scheduleDto;
         }
-        if (scheduleDto.hashCode() != oldBackupScheduleDTO.getHashcode()) {
-            ObjectMapper mapper = new ObjectMapper();
+
+        scheduleResponse.setSchedule(sanitizeSchedule(scheduleResponse.getSchedule()));
+        if (Objects.isNull(oldBackupSchedule.getETag())) {
             try {
-                newBackupScheduleDTO.setRawSchedule(mapper.writeValueAsString(scheduleDto))
-                        .setHashcode(scheduleDto.hashCode());
+                BackupScheduleDTO newBackupScheduleDTO = new BackupScheduleDTO()
+                        .setRawSchedule(mapper.writeValueAsString(scheduleResponse.getSchedule()))
+                        .setETag(scheduleResponse.getETag())
+                        .setLastModified(scheduleResponse.getLastModified());
+                backupScheduleDAO.create(newBackupScheduleDTO);
+                log.info("Old backup was not found. Added a new one with etag: {}", scheduleResponse.getETag());
+                return scheduleResponse.getSchedule();
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
-            backupScheduleDAO.update(newBackupScheduleDTO);
-            log.info("Schedule backup was updated with hashcode: {}", scheduleDto.hashCode());
-            return scheduleDto;
         }
-        log.info("Schedule backup was not updated. Schedule is already up to date");
-        return scheduleDto;
+
+        if (!oldBackupSchedule.getETag().equals(scheduleResponse.getETag()) || !oldBackupSchedule.getLastModified().equals(scheduleResponse.getLastModified())) {
+            try {
+                BackupScheduleDTO newBackupScheduleDTO = new BackupScheduleDTO()
+                        .setRawSchedule(mapper.writeValueAsString(scheduleResponse.getSchedule()))
+                        .setETag(scheduleResponse.getETag())
+                        .setLastModified(scheduleResponse.getLastModified());
+                backupScheduleDAO.update(newBackupScheduleDTO);
+                log.info("Schedule backup was updated with etag: {}", scheduleResponse.getETag());
+                return scheduleResponse.getSchedule();
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+
+        }
+        return scheduleResponse.getSchedule();
     }
 
     public BackupScheduleDTO getBackup() {
         return backupScheduleDAO.find();
     }
 
-    private ScheduleDto sanitizeSchedule(ScheduleDto scheduleDto){
-        scheduleDto.getTeachers().values()
+    private ScheduleDto sanitizeSchedule(ScheduleDto scheduleResponse) {
+        scheduleResponse.getTeachers().values()
                 .forEach(teacher -> teacher
                         .setName(teacher.getName()
                                 .trim()
                                 .replace(". ", ".")
                                 .replace("  ", " ")));
 
-        String firstKey = getKeyByValue(scheduleDto.getPredms(), "Досліджую історію та суспільство");
-        String secondKey = getKeyByValue(scheduleDto.getPredms(), "ІК \"Здоров’я, безпека та добробут\"");
-        scheduleDto.getPredms().put(firstKey, "Досліджую іст. та сусп.");
-        scheduleDto.getPredms().put(secondKey, "Здоров’я, безпека та добробут");
-        return scheduleDto;
+        String firstKey = getKeyByValue(scheduleResponse.getPredms(), "Досліджую історію та суспільство");
+        String secondKey = getKeyByValue(scheduleResponse.getPredms(), "ІК \"Здоров’я, безпека та добробут\"");
+        scheduleResponse.getPredms().put(firstKey, "Досліджую іст. та сусп.");
+        scheduleResponse.getPredms().put(secondKey, "Здоров’я, безпека та добробут");
+        return scheduleResponse;
     }
 }

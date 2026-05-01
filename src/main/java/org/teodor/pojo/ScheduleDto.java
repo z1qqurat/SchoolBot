@@ -17,11 +17,4 @@ public class ScheduleDto {
     List<Integer> classes_sort;
     Map<String, TeacherDetailsDto> teachers;
     List<Integer> teachers_sort;
-
-//    Map<String, String> days;
-//    Integer week;
-//    List<Integer> unums_t;
-//    List<Integer> unums_c;
-//    List<Integer> unums_c2;
-//    String w_mode;
 }
