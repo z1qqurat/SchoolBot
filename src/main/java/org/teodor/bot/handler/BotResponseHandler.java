@@ -98,7 +98,7 @@ public class BotResponseHandler {
         sendMessage(SendMessage
                 .builder()
                 .chatId(update.getMessage().getChatId())
-                .text("Вітаю, %s!\nЯ бот для перегляду шкільного розкладу.\nЩоб дізнатись більше натисніть -> /help".formatted(firstName))
+                .text("Вітаю, %s!\nЯ бот для перегляду шкільного розкладу. Ось список моїх команд:\n".formatted(firstName) + getHelp())
                 .protectContent(true)
                 .build());
     }
@@ -156,15 +156,15 @@ public class BotResponseHandler {
         }
     }
 
-    @BotCommand(command = "/teacher")
+    @BotCommand(command = "/t")
     public void teacherCommand(Update update) {
-        if (update.getMessage().getText().equals("/teacher")) {
+        if (update.getMessage().getText().equals("/t")) {
             sendMessage(buildSendMessage(update.getMessage().getChatId(),
-                    "Введіть введіть частину(мінімум 3 літери)/повне прізвище вчителя через пробіл після команди.\nПриклад 1: /teacher Іва\nПриклад 2: /teacher Іванишин О.М."));
+                    "Введіть введіть частину(мінімум 3 літери)/повне прізвище вчителя через пробіл після команди.\nПриклад 1: /t Іва\nПриклад 2: /t Іванишин О.М."));
             return;
         }
         String teacherName = update.getMessage().getText()
-                .replace("/teacher ", "")
+                .replace("/t ", "")
                 .trim()
                 .replace(". ",".");
 
@@ -196,15 +196,15 @@ public class BotResponseHandler {
 
     }
 
-    @BotCommand(command = "/grade")
+    @BotCommand(command = "/g")
     public void gradeCommand(Update update) {
         if (update.getMessage().getText().equals(GRADE.getText())) {
             sendMessage(buildSendMessage(update.getMessage().getChatId(),
-                    "Введіть частину/повну назву класу через пробіл після команди.\nПриклад 1: /grade 10\nПриклад 2: /grade 10-Б"));
+                    "Введіть частину/повну назву класу через пробіл після команди.\nПриклад 1: /g 10\nПриклад 2: /g 10-Б"));
             return;
         }
 
-        String gradeName = convertEngCharsIntoUkr(update.getMessage().getText().replace("/grade ", ""))
+        String gradeName = convertEngCharsIntoUkr(update.getMessage().getText().replace("/g ", ""))
                 .replace(" ", "");
         List<Map.Entry<String, ClassDetailsDto>> grades = schedule.getClasses().entrySet().stream()
                 .filter(entry -> Strings.CI.contains(entry.getValue().getName(), gradeName))
