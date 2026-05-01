@@ -49,9 +49,18 @@ public class SchoolScheduleBot implements LongPollingSingleThreadUpdateConsumer 
                 return;
             }
 
+            if (update.getMessage().getText().startsWith(Commands.TRACK.getText())) {
+                responseHandler.trackCommand(update);
+                return;
+            }
+
             if (update.getMessage().getText().startsWith(Commands.TODAY.getText())) {
                 responseHandler.todayCommand(update);
                 return;
+            }
+
+            if (update.getMessage().getText().startsWith(Commands.TEST.getText())) {
+                responseHandler.testCommand(update);
             }
 
             if (update.getMessage().getText().startsWith(Commands.TEACHER.getText())) {
@@ -63,12 +72,6 @@ public class SchoolScheduleBot implements LongPollingSingleThreadUpdateConsumer 
                 responseHandler.gradeCommand(update);
                 return;
             }
-
-            if (update.getMessage().getText().startsWith(Commands.TRACK.getText())) {
-                responseHandler.trackCommand(update);
-                return;
-            }
-
             if (update.getMessage().getText().startsWith(Commands.BELL.getText())) {
                 responseHandler.bellCommand(update);
                 return;
@@ -77,10 +80,6 @@ public class SchoolScheduleBot implements LongPollingSingleThreadUpdateConsumer 
             if (update.getMessage().getText().startsWith(Commands.HELP.getText())) {
                 responseHandler.helpCommand(update);
                 return;
-            }
-
-            if (update.getMessage().getText().startsWith(Commands.TEST.getText())) {
-                responseHandler.testCommand(update);
             }
         }
     }
