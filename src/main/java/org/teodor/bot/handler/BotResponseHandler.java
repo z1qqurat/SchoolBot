@@ -34,6 +34,7 @@ import java.util.regex.Pattern;
 
 import static org.teodor.enums.Commands.BELL;
 import static org.teodor.enums.Commands.GRADE;
+import static org.teodor.enums.Commands.TRACK;
 import static org.teodor.util.BotMessageBuilder.buildEditMessage;
 import static org.teodor.util.BotMessageBuilder.buildKeyboardButton;
 import static org.teodor.util.BotMessageBuilder.buildSendMessage;
@@ -158,19 +159,19 @@ public class BotResponseHandler {
 
     @BotCommand(command = "/t")
     public void teacherCommand(Update update) {
-        if (update.getMessage().getText().equals("/t")) {
+        if (update.getMessage().getText().equals("/t") || update.getMessage().getText().equals("/t ")) {
             sendMessage(buildSendMessage(update.getMessage().getChatId(),
-                    "Введіть введіть частину(мінімум 3 літери)/повне прізвище вчителя через пробіл після команди.\nПриклад 1: /t Іва\nПриклад 2: /t Іванишин О.М."));
+                    "Введіть введіть частину(мінімум 3 літери) або повне прізвище вчителя через пробіл після команди.\nПриклад 1: /t Іва\nПриклад 2: /t Іванишин О.М."));
             return;
         }
         String teacherName = update.getMessage().getText()
                 .replace("/t ", "")
                 .trim()
-                .replace(". ",".");
+                .replace(". ", ".");
 
         if (teacherName.length() < 3) {
             sendMessage(buildSendMessage(update.getMessage().getChatId(),
-                    "Введіть мінімум 3 літери прізвища вчителя."));
+                    "Введіть мінімум 3 літери прізвища."));
             return;
         }
         List<Map.Entry<String, TeacherDetailsDto>> teachers = schedule.getTeachers().entrySet().stream()
@@ -198,7 +199,7 @@ public class BotResponseHandler {
 
     @BotCommand(command = "/g")
     public void gradeCommand(Update update) {
-        if (update.getMessage().getText().equals(GRADE.getText())) {
+        if (update.getMessage().getText().equals(GRADE.getText()) || update.getMessage().getText().equals("/g ")) {
             sendMessage(buildSendMessage(update.getMessage().getChatId(),
                     "Введіть частину/повну назву класу через пробіл після команди.\nПриклад 1: /g 10\nПриклад 2: /g 10-Б"));
             return;
@@ -226,10 +227,48 @@ public class BotResponseHandler {
 
     @BotCommand(command = "/track")
     public void trackCommand(Update update) {
-        InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
-                .keyboard(List.of(new InlineKeyboardRow(buildKeyboardButton("Вчитель", "track_teacher")),
-                        new InlineKeyboardRow(buildKeyboardButton("Клас", "track_grade")))).build();
-        sendMessage(buildSendMessage(update.getMessage().getChatId(), "Обери тип розкладу для відстеження:", inlineKeyboardMarkup));
+        if (update.getMessage().getText().equals(TRACK.getText())) {
+            InlineKeyboardMarkup inlineKeyboardMarkup = InlineKeyboardMarkup.builder()
+                    .keyboard(List.of(new InlineKeyboardRow(buildKeyboardButton("Вчитель", "track_teacher")),
+                            new InlineKeyboardRow(buildKeyboardButton("Клас", "track_grade")))).build();
+            sendMessage(buildSendMessage(update.getMessage().getChatId(), "Обери тип розкладу для відстеження:", inlineKeyboardMarkup));
+            return;
+        }
+
+        String entityName = update.getMessage().getText()
+                .replace("/track ", "")
+                .trim();
+        if (Character.isDigit(entityName.charAt(0))) {
+            String gradeName = convertEngCharsIntoUkr(entityName.replace(" ", ""));
+            String gradeId = schedule.getClasses().entrySet().stream()
+                    .filter(entry -> entry.getValue().getName().equalsIgnoreCase(gradeName))
+                    .map(Map.Entry::getKey)
+                    .findFirst()
+                    .orElse(null);
+            if (Objects.isNull(gradeId)) {
+                sendMessage(buildSendMessage(update.getMessage().getChatId(),
+                        "Клас не знайдено.\nВведіть повну назву класу.\nПриклад: /track 5-А"));
+            } else {
+                userService.updateTracking(update.getMessage().getChatId(), false, gradeId);
+                sendMessage(buildSendMessage(update.getMessage().getChatId(), getFormattedScheduleForGrade(schedule, gradeId)));
+            }
+
+        } else {
+            String teacherName = entityName.replace(". ", ".");
+            String teacherId = schedule.getTeachers().entrySet().stream()
+                    .filter(entry -> entry.getValue().getName()
+                            .equalsIgnoreCase(teacherName))
+                    .map(Map.Entry::getKey)
+                    .findFirst()
+                    .orElse(null);
+            if (Objects.isNull(teacherId)) {
+                sendMessage(buildSendMessage(update.getMessage().getChatId(),
+                        "Вчителя не знайдено.\nВведіть повне ПІБ.\nПриклад: /track Пухта Т.А."));
+            } else {
+                userService.updateTracking(update.getMessage().getChatId(), true, teacherId);
+                sendMessage(buildSendMessage(update.getMessage().getChatId(), getFormattedScheduleForTeacher(schedule, teacherId)));
+            }
+        }
     }
 
     @BotCommand(command = "/bell")
@@ -263,6 +302,7 @@ public class BotResponseHandler {
         long messageId = update.getCallbackQuery().getMessage().getMessageId();
         long callbackChatId = update.getCallbackQuery().getMessage().getChatId();
 
+        //TODO: move to CallbackQueryHandler class
         if (callData.startsWith("notif_")) {
             boolean booleanValue = Boolean.parseBoolean(callData.split("notif_")[1]);
             userService.updateNotification(callbackChatId, booleanValue);
