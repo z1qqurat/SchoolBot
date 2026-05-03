@@ -329,12 +329,11 @@ public class BotResponseHandler {
     private void sendNotificationsToUsers() {
         List<UserDTO> usersList = userService.getAllNotificationUsers();
         for (UserDTO user : usersList) {
-            synchronized (Thread.currentThread()) {
-                try {
-                    Thread.currentThread().wait(35);
-                } catch (InterruptedException e) {
-                    log.error("Error sleeping for notification: ", e);
-                }
+            try {
+                Thread.sleep(35);
+            } catch (InterruptedException e) {
+                log.error("Error sleeping for notification: ", e);
+                Thread.currentThread().interrupt();
             }
             sendTodaySchedule(user);
         }
